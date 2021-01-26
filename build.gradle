@@ -1,0 +1,48 @@
+plugins {
+    id 'java'
+    id 'org.jetbrains.intellij' version '0.6.5'
+    id 'org.jetbrains.kotlin.jvm' version '1.4.21'
+}
+
+group 'org.web3j.evm.debugger'
+version '1.0-SNAPSHOT'
+
+repositories {
+    jcenter()
+    mavenCentral()
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib"
+    implementation "org.web3j:core:4.8.1"
+    implementation "org.web3j:web3j-evm:4.5.12"
+    implementation "com.beust:klaxon:5.0.1"
+
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.6.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+}
+
+// See https://github.com/JetBrains/gradle-intellij-plugin/
+intellij {
+    version '2020.3.1'
+    dependencies {
+        compileOnly fileTree(dir: 'libs', include: ['*.jar'])
+    }
+    plugins = [
+        'java', //Required for com.intellij.execution.CommonJavaRunConfigurationParameters
+    ]
+}
+
+compileKotlin {
+    kotlinOptions.jvmTarget = "1.8"
+}
+
+patchPluginXml {
+    changeNotes """
+      Add change notes here.<br>
+      <em>most HTML tags may be used</em>"""
+}
+test {
+    useJUnitPlatform()
+}
+

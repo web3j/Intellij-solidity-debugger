@@ -1,0 +1,36 @@
+<idea-plugin>
+    <id>org.web3.evm-debugger</id>
+    <name>Web3J Solidity Debugger</name>
+    <vendor email="support@web3labs.com" url="http://www.web3labs.com">Web3 Labs</vendor>
+
+    <description><![CDATA[
+      Adds debugging support for Solidity language and integrates Intellij with <a href="http://https://www.web3labs.com/web3j-sdk">Web3j</a> EVM.<br>
+
+      Features:<br>
+      <ul>
+          <li>Solidity debugging</li>
+          <li>Web3 EVM run configuration</li>
+      </ul><br>
+      Requires <a href="https://plugins.jetbrains.com/plugin/9475-intellij-solidity">Intellij-Solidity</a> plugin to be installed
+    ]]></description>
+
+    <!-- please see https://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
+         on how to target different products -->
+    <depends>com.intellij.modules.java</depends>
+    <depends>com.intellij.modules.lang</depends>
+    <depends>me.serce.solidity</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- Add your extensions here -->
+        <!-- runner & debugger -->
+        <!--<runConfigurationProducer implementation=""/>-->
+        <!--<configurationType implementation=""/>-->
+        <programRunner implementation="org.web3j.evm.debugger.SolidityWeb3jRunner"/>
+        <xdebugger.breakpointType implementation="org.web3j.evm.debugger.SolidityLineBreakpointType"/>
+
+   </extensions>
+
+  <actions>
+     <!-- Add your actions here -->
+  </actions>
+</idea-plugin>
