@@ -17,13 +17,12 @@ import com.intellij.openapi.util.Condition;
 import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiMethod;
-import com.intellij.ui.EditorTextFieldWithBrowseButton;
-import me.serce.solidity.ide.run.ui.ContractBrowser;
-import me.serce.solidity.ide.run.ui.IContractFilter;
+import me.serce.solidity.ide.run.ui.EditorTextFieldWithBrowseButton;
 import me.serce.solidity.lang.SolidityFileType;
-import me.serce.solidity.lang.psi.SolContractDefinition;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.web3j.evm.debugger.run.EvmRunConfiguration;
+import org.web3j.evm.debugger.run.EvmRunConfigurationModel;
 
 import javax.swing.*;
 import java.util.ArrayList;
@@ -41,7 +40,7 @@ public class EvmSettingsEditor extends SettingsEditor<EvmRunConfiguration> {
     private LabeledComponent<EditorTextFieldWithBrowseButton> method;
     private LabeledComponent<EditorTextFieldWithBrowseButton> walletPath;
     private LabeledComponent<JTextField> walletPassword;
-  //  private LabeledComponent<JTextField> privateKey;
+    //  private LabeledComponent<JTextField> privateKey;
 
     private CommonJavaParametersPanel myCommonJavaParameters;
     private JrePathEditor myJrePathEditor;
@@ -80,7 +79,7 @@ public class EvmSettingsEditor extends SettingsEditor<EvmRunConfiguration> {
         method.getComponent().setText(s.getMethodName());
         walletPath.getComponent().setText(s.getWalletPath());
         walletPassword.getComponent().setText(s.getWalletPassword());
-      //  privateKey.getComponent().setText(s.getPrivateKey());
+        //  privateKey.getComponent().setText(s.getPrivateKey());
     }
 
     @Override
@@ -89,7 +88,7 @@ public class EvmSettingsEditor extends SettingsEditor<EvmRunConfiguration> {
         s.setMethodName(method.getComponent().getText());
         s.setWalletPath(walletPath.getComponent().getText());
         s.setWalletPassword(walletPassword.getComponent().getText());
-      //  s.setPrivateKey(privateKey.getComponent().getText());
+        //  s.setPrivateKey(privateKey.getComponent().getText());
 
     }
 
@@ -102,20 +101,22 @@ public class EvmSettingsEditor extends SettingsEditor<EvmRunConfiguration> {
 
     private void createUIComponents() {
         contract = new LabeledComponent<>();
-        contract.setComponent(new EditorTextFieldWithBrowseButton(project, true));
+        contract.setComponent(new EditorTextFieldWithBrowseButton(project));
         method = new LabeledComponent<>();
-        method.setComponent(new EditorTextFieldWithBrowseButton(project, false));
+        method.setComponent(new EditorTextFieldWithBrowseButton(project));
         walletPath = new LabeledComponent<>();
-        walletPath.setComponent(new EditorTextFieldWithBrowseButton(project, false));
+        walletPath.setComponent(new EditorTextFieldWithBrowseButton(project));
         walletPassword = new LabeledComponent<>();
         walletPassword.setComponent(new JTextField("", 1));
 
     }
 
 
+
     private class ClassChooserActionListener extends BrowseModuleValueActionListener<JComponent> {
         Project project;
         PsiClass psiClass;
+
         protected ClassChooserActionListener(Project project) {
             super(project);
             this.project = project;
