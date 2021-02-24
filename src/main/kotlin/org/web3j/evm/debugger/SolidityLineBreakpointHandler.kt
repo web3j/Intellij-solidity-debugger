@@ -16,7 +16,7 @@ import com.intellij.xdebugger.breakpoints.XBreakpointHandler
 import com.intellij.xdebugger.breakpoints.XBreakpointProperties
 import com.intellij.xdebugger.breakpoints.XLineBreakpoint
 
-class SolidityLineBreakpointHandler(val debugProcess: Web3jDebugProcess):
+class SolidityLineBreakpointHandler(private val debugProcess: Web3jDebugProcess):
     XBreakpointHandler<XLineBreakpoint<XBreakpointProperties<*>>>(SolidityLineBreakpointType::class.java) {
     /**
      * Called when a breakpoint need to be registered in the debugging engine
@@ -24,6 +24,7 @@ class SolidityLineBreakpointHandler(val debugProcess: Web3jDebugProcess):
      */
     override fun registerBreakpoint(breakpoint: XLineBreakpoint<XBreakpointProperties<*>>) {
         println("Register breakpoint: $breakpoint")
+        debugProcess.addBreakpoint(breakpoint)
     }
 
     /**
@@ -33,9 +34,10 @@ class SolidityLineBreakpointHandler(val debugProcess: Web3jDebugProcess):
      * be used for performance purposes. For example the breakpoint may be disabled rather than removed in the debugging engine if
      * `temporary` is `true`
      */
-    override fun unregisterBreakpoint(breakpoint: XLineBreakpoint<XBreakpointProperties<*>>, temporary: Boolean) {
+    override fun unregisterBreakpoint(breakpoint: XLineBreakpoint<XBreakpointProperties<*>>,
+                                      temporary: Boolean) {
         println("unregister breakpoint: $breakpoint")
+        debugProcess.removeBreakpoint(breakpoint)
     }
-    
 
 }

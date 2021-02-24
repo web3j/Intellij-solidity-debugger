@@ -15,14 +15,25 @@ package org.web3j.evm.debugger
 import com.intellij.xdebugger.frame.XExecutionStack
 import com.intellij.xdebugger.frame.XStackFrame
 
-class ExecutionStack(private val stackFrameList: List<XStackFrame>) : XExecutionStack("Webj3EVMStack") {
+class ExecutionStack(stackFrameList: List<XStackFrame>)
+    :XExecutionStack("Webj3EVMStack") {
+
+    private var topFrame: XStackFrame? = null
+
+    fun setTopFrame(frame: XStackFrame) {
+        topFrame = frame
+    }
+
+    init {
+        if (stackFrameList.isNotEmpty())
+            topFrame = stackFrameList[0]
+    }
+
     /**
      * Return top stack frame synchronously
      * @return top stack frame or `null` if it isn't available
      */
-    override fun getTopFrame(): XStackFrame? {
-        TODO("Not yet implemented")
-    }
+    override fun getTopFrame() = topFrame
 
     /**
      * Start computing stack frames top-down starting from `firstFrameIndex`. This method is called from the Event Dispatch Thread
@@ -31,7 +42,8 @@ class ExecutionStack(private val stackFrameList: List<XStackFrame>) : XExecution
      * @param container callback
      */
     override fun computeStackFrames(firstFrameIndex: Int, container: XStackFrameContainer?) {
-        TODO("Not yet implemented")
+        println("computeStackFrames  $firstFrameIndex")
+        container!!.addStackFrames(mutableListOf(topFrame), false)
     }
 
 }
