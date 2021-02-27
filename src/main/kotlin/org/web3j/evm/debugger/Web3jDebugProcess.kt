@@ -14,11 +14,7 @@ package org.web3j.evm.debugger
 
 import com.intellij.execution.ui.ConsoleViewContentType
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.util.ArrayUtil
-import com.intellij.util.Processor
-import com.intellij.util.containers.ContainerUtil
-import com.intellij.util.io.isFile
+import com.intellij.util.io.exists
 import com.intellij.xdebugger.XDebugProcess
 import com.intellij.xdebugger.XDebugSession
 import com.intellij.xdebugger.XDebuggerManager
@@ -30,20 +26,23 @@ import com.intellij.xdebugger.breakpoints.XLineBreakpointType
 import com.intellij.xdebugger.evaluation.XDebuggerEditorsProvider
 import com.intellij.xdebugger.frame.XSuspendContext
 import me.serce.solidity.ide.run.SolidityRunConfig
+
 import org.hyperledger.besu.ethereum.vm.OperationTracer
 import org.web3j.abi.datatypes.Address
+import org.web3j.tx.Contract.deployRemoteCall
+import org.web3j.crypto.ContractUtils
 import org.web3j.crypto.WalletUtils
 import org.web3j.evm.Configuration
 import org.web3j.evm.ConsoleDebugTracer
 import org.web3j.evm.EmbeddedWeb3jService
 import org.web3j.protocol.Web3j
-import org.web3j.tx.Transfer
+import org.web3j.tx.Contract
+import org.web3j.tx.Contract.deploy
 import org.web3j.tx.gas.DefaultGasProvider
-import org.web3j.utils.Convert
+
 import java.io.File
-import java.math.BigDecimal
-import java.nio.file.Files
 import java.nio.file.Paths
+import java.net.URLClassLoader
 
 class Web3jDebugProcess constructor(session: XDebugSession) : XDebugProcess(session) {
 
@@ -63,23 +62,34 @@ class Web3jDebugProcess constructor(session: XDebugSession) : XDebugProcess(sess
 
     override fun sessionInitialized() {
         super.sessionInitialized()
-        startWeb3j()
+        startWeb3jEmbeddedService()
         debug()
     }
 
-    private fun startWeb3j(){
+    private fun startWeb3jEmbeddedService(){
         val workingDir = getRunConfig().workingDirectory as String
-        var walletFile = "$workingDir/wallet.json"
+        var walletFile = "$workingDir/${getRunConfig().name}_wallet.json"
 
-        if (!Files.exists(Paths.get(walletFile)))
-           walletFile = "$workingDir/" + WalletUtils.generateNewWalletFile("Password123", File(workingDir))
+        if (!Paths.get(walletFile).exists()) {
+            val newWallet = "$workingDir/" + WalletUtils.generateNewWalletFile("Password123", File(workingDir))
+            File(newWallet).renameTo(File(walletFile))
+        }
 
+        consolePrint(walletFile)
         val credentials = WalletUtils.loadCredentials("Password123", walletFile)
         val configuration = Configuration(Address(credentials.address), 10)
-
         operationTracer = ConsoleDebugTracer()
-        val web3j = Web3j.build(EmbeddedWeb3jService(configuration, operationTracer))
+        val web3jService = EmbeddedWeb3jService(configuration, operationTracer)
+        web3j = Web3j.build(web3jService)
         println("EmbeddedWeb3jService started ${web3j}")
+
+        //val classesLoc = File("/web3j-evmexample/build/classes/java/main")
+        //val cl: ClassLoader = URLClassLoader.newInstance(arrayOf(classesLoc.toURI().toURL()),
+          //  this.javaClass.classLoader)
+        //val contract = cl.loadClass("org.web3j.regreeter.Regreeter") as <* : Contract>
+        //val binary = ""
+        //val encodedConstrcutro = ""
+        //deployRemoteCall(contract, web3j, credentials, DefaultGasProvider(), binary, encodedConstrcutro )
 
     }
 
@@ -102,7 +112,7 @@ class Web3jDebugProcess constructor(session: XDebugSession) : XDebugProcess(sess
 
     override fun stop() {
         println("Stopping debugger.")
-        web3j.shutdown()
+        //web3j.shutdown()
     }
 
     private fun suspend() {
