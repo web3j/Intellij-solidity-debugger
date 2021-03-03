@@ -1,18 +1,32 @@
 package org.web3j.evm.debugger.run
 
+import com.intellij.execution.JavaExecutionUtil
 import com.intellij.openapi.project.Project
-import org.web3j.evm.debugger.configuration.EvmSettingsEditor
 
-class EvmRunConfigurationModel(project: Project) {
-    private var listener: EvmSettingsEditor? = null
-    private val contracts = emptyList<Any>()
-    private var project: Project? = null
+class EvmRunConfigurationModel(private val project: Project) {
+    private var listener: EvmSettingsEditorPanel? = null
 
-    fun setListener(listener: EvmSettingsEditor?) {
+    fun setListener(listener: EvmSettingsEditorPanel) {
         this.listener = listener
     }
 
-    private fun applyTo(configuration: EvmRunConfiguration) {
-        configuration.setContractName("")
+    fun apply(configuration: EvmRunConfiguration) {
+        val shouldUpdateName = configuration.isGeneratedName
+        if (shouldUpdateName && !JavaExecutionUtil.isNewName(configuration.name)) {
+            configuration.setGeneratedName()
+        }
     }
+
+
+    fun reset(configuration: EvmRunConfiguration) {
+        val data = configuration.getPersistentData()
+        data.getContractName()
+        data.getWalletPath()
+        data.getPrivateKey()
+        data.getWalletPassword()
+        data.getMethodWrapperName()
+        data.getContractWrapperName()
+
+    }
+
 }

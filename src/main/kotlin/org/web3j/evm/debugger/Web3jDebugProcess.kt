@@ -26,23 +26,22 @@ import com.intellij.xdebugger.breakpoints.XLineBreakpointType
 import com.intellij.xdebugger.evaluation.XDebuggerEditorsProvider
 import com.intellij.xdebugger.frame.XSuspendContext
 import me.serce.solidity.ide.run.SolidityRunConfig
-
 import org.hyperledger.besu.ethereum.vm.OperationTracer
 import org.web3j.abi.datatypes.Address
-import org.web3j.tx.Contract.deployRemoteCall
-import org.web3j.crypto.ContractUtils
+import org.web3j.crypto.Credentials
 import org.web3j.crypto.WalletUtils
 import org.web3j.evm.Configuration
 import org.web3j.evm.ConsoleDebugTracer
 import org.web3j.evm.EmbeddedWeb3jService
+import org.web3j.evm.debugger.run.EvmRunConfiguration
 import org.web3j.protocol.Web3j
-import org.web3j.tx.Contract
-import org.web3j.tx.Contract.deploy
+import org.web3j.protocol.core.RemoteCall
+import org.web3j.tx.gas.ContractGasProvider
 import org.web3j.tx.gas.DefaultGasProvider
-
 import java.io.File
-import java.nio.file.Paths
 import java.net.URLClassLoader
+import java.nio.file.Paths
+import kotlin.reflect.jvm.kotlinFunction
 
 class Web3jDebugProcess constructor(session: XDebugSession) : XDebugProcess(session) {
 
@@ -68,29 +67,34 @@ class Web3jDebugProcess constructor(session: XDebugSession) : XDebugProcess(sess
 
     private fun startWeb3jEmbeddedService(){
         val workingDir = getRunConfig().workingDirectory as String
+        /*
         var walletFile = "$workingDir/${getRunConfig().name}_wallet.json"
-
         if (!Paths.get(walletFile).exists()) {
-            val newWallet = "$workingDir/" + WalletUtils.generateNewWalletFile("Password123", File(workingDir))
+            val newWallet = "$workingDir/" + WalletUtils
+                .generateNewWalletFile("Password123", File(workingDir))
             File(newWallet).renameTo(File(walletFile))
         }
-
         consolePrint(walletFile)
-        val credentials = WalletUtils.loadCredentials("Password123", walletFile)
+
+         */
+        val credentials = Credentials.create("8956cf546a960f49ce61ec2bcc892565355a67cb9cd9830bc5a674fb5e2d8e1e")
         val configuration = Configuration(Address(credentials.address), 10)
         operationTracer = ConsoleDebugTracer()
         val web3jService = EmbeddedWeb3jService(configuration, operationTracer)
         web3j = Web3j.build(web3jService)
-        println("EmbeddedWeb3jService started ${web3j}")
-
-        //val classesLoc = File("/web3j-evmexample/build/classes/java/main")
-        //val cl: ClassLoader = URLClassLoader.newInstance(arrayOf(classesLoc.toURI().toURL()),
-          //  this.javaClass.classLoader)
-        //val contract = cl.loadClass("org.web3j.regreeter.Regreeter") as <* : Contract>
-        //val binary = ""
-        //val encodedConstrcutro = ""
-        //deployRemoteCall(contract, web3j, credentials, DefaultGasProvider(), binary, encodedConstrcutro )
-
+        consolePrint("EmbeddedWeb3jService started ${web3j}")
+        val classesDir = File("${workingDir}/build/classes/java/main")
+        val cl: ClassLoader = URLClassLoader.newInstance(arrayOf(classesDir.toURI().toURL()),
+            this.javaClass.classLoader)
+        val contractClass = cl.loadClass("org.web3j.greeter.Greeter")
+        val _deploy = contractClass.getMethod("deploy",
+            Web3j::class.java,
+            Credentials::class.java,
+            ContractGasProvider::class.java,
+            String::class.java)
+        var instance = _deploy?.kotlinFunction?.call(web3j, credentials, DefaultGasProvider(), "Hello!")
+                as RemoteCall<*>
+        consolePrint("Deployed Contract ${instance.send()}")
     }
 
     private fun getRunConfig(): SolidityRunConfig {

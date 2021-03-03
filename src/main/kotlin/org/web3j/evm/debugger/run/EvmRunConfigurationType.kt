@@ -1,28 +1,45 @@
 package org.web3j.evm.debugger.run
 
 import com.intellij.execution.configurations.ConfigurationFactory
-import com.intellij.execution.configurations.ConfigurationType
+import com.intellij.execution.configurations.ConfigurationTypeBase
+import com.intellij.execution.configurations.RunConfiguration
 import com.intellij.icons.AllIcons
+import com.intellij.openapi.project.Project
 import javax.swing.Icon
 
-class EvmRunConfigurationType : ConfigurationType {
-    override fun getDisplayName(): String {
-        return "EVM"
+class EvmRunConfigurationType :
+    ConfigurationTypeBase(
+        "EVM_RUN_CONFIGURATION",
+        "Evm",
+        "Debug Solidity smart contracts",
+        AllIcons.General.Information
+    ) {
+    init {
+        addFactory(configurationFactory())
     }
 
-    override fun getConfigurationTypeDescription(): String {
-        return "EVM configuration type"
-    }
+    private fun configurationFactory(): ConfigurationFactory {
+        return object : ConfigurationFactory(this) {
+            override fun createTemplateConfiguration(p: Project): RunConfiguration {
+                val configurationModule = EvmRunConfigurationModule(p)
+                return if (hasJavaSupport) EvmRunConfiguration(configurationModule, this)
+                else throw RuntimeException("Not a valid configuration")
+            }
 
-    override fun getIcon(): Icon {
-        return AllIcons.General.Information
-    }
+            override fun getIcon(): Icon {
+                return AllIcons.General.Information
+            }
 
-    override fun getId(): String {
-        return "EVM_RUN_CONFIGURATION"
+            override fun isApplicable(project: Project): Boolean {
+                return hasJavaSupport
+            }
+        }
     }
+}
 
-    override fun getConfigurationFactories(): Array<ConfigurationFactory> {
-        return arrayOf(EvmRunConfigurationFactory(this))
-    }
+val hasJavaSupport = try {
+    Class.forName("com.intellij.execution.CommonJavaRunConfigurationParameters")
+    true
+} catch (e: ClassNotFoundException) {
+    false
 }

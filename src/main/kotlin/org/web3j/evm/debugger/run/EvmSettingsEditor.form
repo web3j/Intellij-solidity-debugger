@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<form xmlns="http://www.intellij.com/uidesigner/form/" version="1" bind-to-class="org.web3j.evm.debugger.configuration.EvmSettingsEditor">
+<form xmlns="http://www.intellij.com/uidesigner/form/" version="1" bind-to-class="org.web3j.evm.debugger.run.EvmSettingsEditorPanel">
   <grid id="8a847" binding="mainPanel" layout-manager="GridLayoutManager" row-count="2" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
     <margin top="0" left="0" bottom="0" right="0"/>
     <constraints>
-      <xy x="20" y="20" width="827" height="400"/>
+      <xy x="20" y="20" width="827" height="412"/>
     </constraints>
     <properties/>
     <border type="none"/>
     <children>
-      <grid id="27dc6" layout-manager="GridLayoutManager" row-count="4" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+      <grid id="27dc6" layout-manager="GridLayoutManager" row-count="6" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
         <margin top="0" left="0" bottom="0" right="0"/>
         <constraints>
           <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
@@ -16,29 +16,29 @@
         <properties/>
         <border type="none"/>
         <children>
-          <component id="548c9" class="com.intellij.openapi.ui.LabeledComponent" binding="contract" custom-create="true">
+          <component id="548c9" class="com.intellij.openapi.ui.LabeledComponent" binding="contractWrapper" custom-create="true">
             <constraints>
               <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
                 <preferred-size width="150" height="-1"/>
               </grid>
             </constraints>
             <properties>
-              <text value="&amp;Contract:" noi18n="true"/>
+              <text value="&amp;Contract Wrapper:" noi18n="true"/>
             </properties>
           </component>
-          <component id="a58e4" class="com.intellij.openapi.ui.LabeledComponent" binding="method" custom-create="true">
+          <component id="a58e4" class="com.intellij.openapi.ui.LabeledComponent" binding="wrappedMethod" custom-create="true">
             <constraints>
-              <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
+              <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
                 <preferred-size width="150" height="-1"/>
               </grid>
             </constraints>
             <properties>
-              <text value="&amp;Method" noi18n="true"/>
+              <text value="&amp;Deploy Method:" noi18n="true"/>
             </properties>
           </component>
           <component id="3081f" class="com.intellij.openapi.ui.LabeledComponent" binding="walletPath" custom-create="true">
             <constraints>
-              <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
+              <grid row="3" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
                 <preferred-size width="150" height="-1"/>
               </grid>
             </constraints>
@@ -48,12 +48,32 @@
           </component>
           <component id="b1cec" class="com.intellij.openapi.ui.LabeledComponent" binding="walletPassword" custom-create="true">
             <constraints>
-              <grid row="3" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
+              <grid row="4" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
                 <preferred-size width="150" height="-1"/>
               </grid>
             </constraints>
             <properties>
               <text value="&amp;Wallet Password"/>
+            </properties>
+          </component>
+          <component id="1868a" class="com.intellij.openapi.ui.LabeledComponent" binding="privateKey" custom-create="true">
+            <constraints>
+              <grid row="5" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                <preferred-size width="150" height="-1"/>
+              </grid>
+            </constraints>
+            <properties>
+              <text value="&amp;Private Key"/>
+            </properties>
+          </component>
+          <component id="420f4" class="com.intellij.openapi.ui.LabeledComponent" binding="solidityContract" custom-create="true">
+            <constraints>
+              <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                <preferred-size width="150" height="-1"/>
+              </grid>
+            </constraints>
+            <properties>
+              <text value="&amp;Solidity Contract" noi18n="true"/>
             </properties>
           </component>
         </children>
@@ -66,7 +86,7 @@
         <properties/>
         <border type="none"/>
         <children>
-          <component id="3b817" class="com.intellij.execution.ui.CommonJavaParametersPanel" binding="myCommonJavaParameters">
+          <component id="3b817" class="com.intellij.execution.ui.CommonJavaParametersPanel" binding="commonJavaParametersPanel">
             <constraints>
               <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
             </constraints>
