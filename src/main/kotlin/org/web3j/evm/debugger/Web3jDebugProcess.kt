@@ -14,6 +14,7 @@ package org.web3j.evm.debugger
 
 import com.intellij.execution.ui.ConsoleViewContentType
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.util.io.exists
 import com.intellij.xdebugger.XDebugProcess
 import com.intellij.xdebugger.XDebugSession
 import com.intellij.xdebugger.XDebuggerManager
@@ -25,17 +26,19 @@ import com.intellij.xdebugger.breakpoints.XLineBreakpointType
 import com.intellij.xdebugger.evaluation.XDebuggerEditorsProvider
 import com.intellij.xdebugger.frame.XSuspendContext
 import me.serce.solidity.ide.run.SolidityRunConfig
+import org.hyperledger.besu.ethereum.vm.OperationTracer
 import org.web3j.abi.datatypes.Address
 import org.web3j.crypto.Credentials
+import org.web3j.crypto.WalletUtils
 import org.web3j.evm.Configuration
 import org.web3j.evm.EmbeddedWeb3jService
 import org.web3j.protocol.Web3j
 import org.web3j.protocol.core.RemoteCall
 import org.web3j.tx.gas.ContractGasProvider
 import org.web3j.tx.gas.DefaultGasProvider
-import java.io.BufferedReader
 import java.io.File
 import java.net.URLClassLoader
+import java.nio.file.Paths
 import kotlin.reflect.jvm.kotlinFunction
 
 class Web3jDebugProcess constructor(session: XDebugSession) : XDebugProcess(session) {
@@ -43,8 +46,9 @@ class Web3jDebugProcess constructor(session: XDebugSession) : XDebugProcess(sess
     private val breakpointHandler = SolidityLineBreakpointHandler(this)
     private val breakpoints = mutableListOf<XLineBreakpoint<*>>()
 
-    private var operationTracer = SolidityDebugTracer()
+    private var operationTracer: SolidityDebugTracer = SolidityDebugTracer(this)
     private lateinit var web3j: Web3j
+
     override fun getEditorsProvider(): XDebuggerEditorsProvider {
         return DebuggerEditorsProvider()
     }
@@ -56,84 +60,88 @@ class Web3jDebugProcess constructor(session: XDebugSession) : XDebugProcess(sess
     override fun sessionInitialized() {
         super.sessionInitialized()
         startWeb3jEmbeddedService()
-        debug()
+    }
+
+    private fun setBreakpoints() {
+        val breakpointsMap = mutableMapOf<String, MutableSet<Int>>()
+
+        breakpoints.forEach {
+            val src = "src/main/solidity/" + it.shortFilePath;
+            breakpointsMap.getOrPut(src) { mutableSetOf() }.add(it.line+1) // first XLineBreakpoint is 0
+        }
+
+        operationTracer.setBreakpoints(breakpointsMap)
     }
 
     private fun startWeb3jEmbeddedService() {
         val workingDir = getRunConfig().workingDirectory as String
-        /*
-        var walletFile = "$workingDir/${getRunConfig().name}_wallet.json"
-        if (!Paths.get(walletFile).exists()) {
-            val newWallet = "$workingDir/" + WalletUtils
-                .generateNewWalletFile("Password123", File(workingDir))
-            File(newWallet).renameTo(File(walletFile))
-        }
-        consolePrint(walletFile)
-         */
-        val credentials = Credentials.create("8956cf546a960f49ce61ec2bcc892565355a67cb9cd9830bc5a674fb5e2d8e1e")
-        val configuration = Configuration(Address(credentials.address), 10)
 
-        val web3jService = EmbeddedWeb3jService(configuration, operationTracer)
-        web3j = Web3j.build(web3jService)
-        consolePrint("EmbeddedWeb3jService started ${web3j}")
-        val classesDir = File("/home/alexandrou/Documents/dev/web3j-evmexample/build/classes/java/main")
-        val cl: ClassLoader = URLClassLoader.newInstance(
-            arrayOf(classesDir.toURI().toURL()),
-            this.javaClass.classLoader
-        )
-        val contractClass = cl.loadClass("org.web3j.greeter.Greeter")
-        val _deploy = contractClass.getMethod(
-            "deploy",
-            Web3j::class.java,
-            Credentials::class.java,
-            ContractGasProvider::class.java,
-            String::class.java
-        )
-        var instance = _deploy?.kotlinFunction?.call(web3j, credentials, DefaultGasProvider(), "Hello!")
-                as RemoteCall<*>
-        consolePrint("Deployed Contract ${instance.send()}")
-        operationTracer.parseBreakPointOption("break list")
-        operationTracer
-    }
+        val (config, credentials) =
+            createWeb3jConfig("8956cf546a960f49ce61ec2bcc892565355a67cb9cd9830bc5a674fb5e2d8e1e")
 
-    private fun getRunConfig(): SolidityRunConfig {
-        val runConfig = session.runProfile as SolidityRunConfig
-        println("Working directory: ${runConfig.workingDirectory}")
-        consolePrint(
-            "Contract Name/File:" +
-                    " ${runConfig.getPersistentData().contractName} \n" +
-                    " ${runConfig.getPersistentData().contractFile}"
-        )
-        return runConfig
-    }
-
-    private fun debug() {
         ApplicationManager.getApplication().executeOnPooledThread {
-            val reader = BufferedReader(operationTracer.getOutputAsStream().reader())
-            val content = StringBuilder()
-            reader.use { reader ->
-                var line = reader.readLine()
-                while (line != null) {
-                    content.append(line)
-                    line = reader.readLine()
-                    consolePrint(line)
-                }
-            }
-            suspend()
+            operationTracer = SolidityDebugTracer(this)
+            setBreakpoints()
+
+            val web3jService = EmbeddedWeb3jService(config, operationTracer as OperationTracer)
+            web3j = Web3j.build(web3jService)
+
+            consolePrint("EmbeddedWeb3jService started ${web3j}")
+
+            val classesDir = File("${workingDir}/build/classes/java/main")
+            val cl: ClassLoader = URLClassLoader.newInstance(
+                arrayOf(classesDir.toURI().toURL()),
+                this.javaClass.classLoader
+            )
+
+            val contractClass = cl.loadClass("org.web3j.greeter.Greeter")
+
+            val deploy = contractClass.getMethod(
+                "deploy",
+                Web3j::class.java,
+                Credentials::class.java,
+                ContractGasProvider::class.java,
+                String::class.java
+            )
+
+            val instance = deploy.kotlinFunction?.call(web3j, credentials, DefaultGasProvider(), "Hello!")
+                    as RemoteCall<*>
+
+            consolePrint("Deployed Contract ${instance.send()}")
         }
+    }
+
+    fun getRunConfig(): SolidityRunConfig {
+        return session.runProfile as SolidityRunConfig
+    }
+
+    private fun createWeb3jConfig(privateKey: String?): Pair<Configuration, Credentials> {
+        val credentials = if (privateKey.isNullOrEmpty()) {
+            val workingDir = getRunConfig().workingDirectory + "/"
+            val walletFile = "$workingDir${getRunConfig().name}_wallet.json"
+            if (!Paths.get(walletFile).exists()) {
+                val newWallet = workingDir + WalletUtils
+                    .generateNewWalletFile("Password123", File(workingDir))
+                File(newWallet).renameTo(File(walletFile))
+            }
+            WalletUtils.loadCredentials("Password123", walletFile)
+        } else {
+            Credentials.create(privateKey)
+        }
+        return Pair(Configuration(Address(credentials.address), 10), credentials)
     }
 
     override fun stop() {
         println("Stopping debugger.")
-        //web3j.shutdown()
+        web3j.shutdown()
     }
 
-    private fun suspend() {
+    fun suspend(lineNumber: Int) {
         ApplicationManager.getApplication().runReadAction {
             val contractFile = getRunConfig().getPersistentData().contractFile as String
-            val suspendContext = SoliditySuspendContext(ExecutionStack(listOf(SolidityStackFrame())))
-            consolePrint("Current stack ${session.currentStackFrame}")
-            val breakpoint = findBreakpoint(contractFile, 5)
+            val executionStack = ExecutionStack(operationTracer.getStackFrames())
+            val suspendContext = SoliditySuspendContext(executionStack)
+            val breakpoint = findBreakpoint(contractFile, lineNumber)
             if (breakpoint != null) {
                 session.breakpointReached(breakpoint, null, suspendContext)
             } else {
@@ -142,7 +150,7 @@ class Web3jDebugProcess constructor(session: XDebugSession) : XDebugProcess(sess
         }
     }
 
-    private fun findBreakpoint(scriptPath: String, lineNumber: Int): XLineBreakpoint<out XBreakpointProperties<Any>>? {
+    private fun findBreakpoint(filePath: String, lineNumber: Int): XLineBreakpoint<out XBreakpointProperties<Any>>? {
         val manager = XDebuggerManager.getInstance(session.project).breakpointManager
         val type: XLineBreakpointType<*>? = XDebuggerUtil.getInstance().findBreakpointType(
             SolidityLineBreakpointType::class.java
@@ -151,7 +159,7 @@ class Web3jDebugProcess constructor(session: XDebugSession) : XDebugProcess(sess
         if (type != null) {
             val breakpoints = manager.getBreakpoints(type)
             for (breakpoint in breakpoints) {
-                if (breakpoint.fileUrl.contains(scriptPath) && breakpoint.line == lineNumber - 1) {
+                if (breakpoint.fileUrl.contains(filePath) && breakpoint.line == lineNumber - 1) {
                     return breakpoint
                 }
             }
@@ -159,22 +167,18 @@ class Web3jDebugProcess constructor(session: XDebugSession) : XDebugProcess(sess
         return null
     }
 
-    private fun consolePrint(message: String) {
+    fun consolePrint(message: String) {
         session.consoleView.print("${message}\n", ConsoleViewContentType.NORMAL_OUTPUT)
     }
 
     fun addBreakpoint(breakpoint: XLineBreakpoint<*>) {
-        println("Add breakpoint $breakpoint $breakpoints")
-        val fileName = breakpoint.shortFilePath.subSequence(0, breakpoint.shortFilePath.length - 4).toString()
-        operationTracer.getBreakPointMap().getOrPut(fileName) { mutableSetOf() }.add(breakpoint.line)
         breakpoints.add(breakpoint)
+        setBreakpoints()
     }
 
     fun removeBreakpoint(breakpoint: XLineBreakpoint<*>) {
-        println("Remove breakpoint $breakpoint")
-        val fileName = breakpoint.shortFilePath.subSequence(0, breakpoint.shortFilePath.length - 4).toString()
-        operationTracer.getBreakPointMap().remove(fileName, mutableSetOf(breakpoint.line))
-        breakpoints.add(breakpoint)
+        breakpoints.remove(breakpoint)
+        setBreakpoints()
     }
 
     override fun resume(context: XSuspendContext?) {
@@ -189,20 +193,18 @@ class Web3jDebugProcess constructor(session: XDebugSession) : XDebugProcess(sess
     }
 
     override fun startStepInto(context: XSuspendContext?) {
+        operationTracer.sendCommand("stepInto")
         println("step into..")
-        debug()
     }
 
     override fun startStepOut(context: XSuspendContext?) {
         println("step out..")
-        debug()
+        operationTracer.sendCommand("stepOut")
     }
 
     override fun startStepOver(context: XSuspendContext?) {
         println("step over..")
-        //session.ui.component.componentPopupMenu.
-        //operationTracer.reader.read("next".toCharArray())
-        debug()
+        operationTracer.sendCommand("stepOver")
     }
 
 }
