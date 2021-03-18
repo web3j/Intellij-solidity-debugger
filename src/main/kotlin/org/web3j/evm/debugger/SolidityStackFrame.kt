@@ -1,33 +1,35 @@
 package org.web3j.evm.debugger
 
-import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.ui.ColoredTextContainer
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.xdebugger.XDebuggerUtil
 import com.intellij.xdebugger.XSourcePosition
-import com.intellij.xdebugger.evaluation.XDebuggerEvaluator
-import com.intellij.xdebugger.frame.XStackFrame
+import com.intellij.xdebugger.frame.*
+import java.nio.file.Paths
 
-class SolidityStackFrame(srcFile: VirtualFile?, line: Int) : XStackFrame() {
-    private val srcPosition: XSourcePosition?
-
-    init {
-        srcPosition = XDebuggerUtil.getInstance().createPosition(srcFile, line)
+class SolidityValue(name: String, private val type: String, private val value: String) : XNamedValue(name) {
+    override fun computePresentation(node: XValueNode, place: XValuePlace) {
+        node.setPresentation(null, type, value, false)
     }
+}
 
+class SolidityStackFrame(private val project: Project,
+                         private val srcFile: String,
+                         private val line: Int): XStackFrame() {
 
-    override fun getEqualityObject(): Any? {
-        return super.getEqualityObject()
-    }
-
-    override fun getEvaluator(): XDebuggerEvaluator? {
-        return super.getEvaluator()
-    }
+    private val values = XValueChildrenList()
 
     override fun getSourcePosition(): XSourcePosition? {
-        return srcPosition
+        val virtualFile = LocalFileSystem.getInstance().findFileByNioFile(Paths.get(srcFile).normalize())
+        return XDebuggerUtil.getInstance().createPosition(virtualFile, line - 1)
     }
 
-    override fun customizePresentation(component: ColoredTextContainer) {
-        super.customizePresentation(component)
+    fun addValue(node: SolidityValue) {
+        values.add(node.name, node)
     }
+
+    override fun computeChildren(node: XCompositeNode) {
+        node.addChildren(values, true)
+    }
+
 }

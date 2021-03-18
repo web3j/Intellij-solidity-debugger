@@ -12,21 +12,18 @@
  */
 package org.web3j.evm.debugger
 
-import com.intellij.openapi.project.Project
 import com.intellij.xdebugger.frame.XExecutionStack
 import com.intellij.xdebugger.frame.XStackFrame
+import com.intellij.xdebugger.impl.frame.XStackFrameContainerEx
 
-class ExecutionStack(stackFrameList: List<XStackFrame>, project: Project) : XExecutionStack("Webj3EVMStack") {
+class ExecutionStack(private val stackFrameList: List<SolidityStackFrame>)
+    :XExecutionStack("EVM Stack") {
 
     private var topFrame: XStackFrame? = null
 
-    fun setTopFrame(frame: XStackFrame) {
-        topFrame = frame
-    }
-
     init {
-        if (stackFrameList.isNotEmpty())
-            topFrame = stackFrameList[0]
+      if (stackFrameList.isNotEmpty())
+         topFrame = stackFrameList[0]
     }
 
     /**
@@ -42,8 +39,9 @@ class ExecutionStack(stackFrameList: List<XStackFrame>, project: Project) : XExe
      * @param container callback
      */
     override fun computeStackFrames(firstFrameIndex: Int, container: XStackFrameContainer?) {
-        println("computeStackFrames  $firstFrameIndex")
-        container!!.addStackFrames(mutableListOf(topFrame), false)
+        val stackFrameContainerEx = container as XStackFrameContainerEx
+        stackFrameContainerEx.addStackFrames(stackFrameList, topFrame, true)
     }
+
 
 }
