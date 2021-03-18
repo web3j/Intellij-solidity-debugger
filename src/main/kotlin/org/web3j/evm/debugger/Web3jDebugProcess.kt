@@ -32,6 +32,7 @@ import org.web3j.crypto.Credentials
 import org.web3j.crypto.WalletUtils
 import org.web3j.evm.Configuration
 import org.web3j.evm.EmbeddedWeb3jService
+import org.web3j.evm.debugger.run.EvmRunConfiguration
 import org.web3j.protocol.Web3j
 import org.web3j.protocol.core.RemoteCall
 import org.web3j.tx.gas.ContractGasProvider
@@ -94,7 +95,7 @@ class Web3jDebugProcess constructor(session: XDebugSession) : XDebugProcess(sess
                 this.javaClass.classLoader
             )
 
-            val contractClass = cl.loadClass("org.web3j.greeter.Greeter")
+            val contractClass = cl.loadClass(getRunConfig().getPersistentData().contractWrapperName)
 
             val deploy = contractClass.getMethod(
                 "deploy",
@@ -111,8 +112,8 @@ class Web3jDebugProcess constructor(session: XDebugSession) : XDebugProcess(sess
         }
     }
 
-    fun getRunConfig(): SolidityRunConfig {
-        return session.runProfile as SolidityRunConfig
+    fun getRunConfig(): EvmRunConfiguration {
+        return session.runProfile as EvmRunConfiguration
     }
 
     private fun createWeb3jConfig(privateKey: String?): Pair<Configuration, Credentials> {
