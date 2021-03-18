@@ -11,6 +11,8 @@ import com.intellij.execution.util.ProgramParametersUtil
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.options.SettingsEditor
 import com.intellij.openapi.options.SettingsEditorGroup
+import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.psi.PsiManager
 import com.intellij.util.xmlb.XmlSerializer
 import me.serce.solidity.ide.run.SearchUtils
 import me.serce.solidity.lang.psi.SolContractDefinition
@@ -126,7 +128,6 @@ class EvmRunConfiguration(
         XmlSerializer.serializeInto(this, element)
         XmlSerializer.serializeInto(myData, element)
         writeModule(element)
-
         EnvironmentVariablesComponent.writeExternal(element, envs)
     }
 
@@ -135,7 +136,6 @@ class EvmRunConfiguration(
         JavaRunConfigurationExtensionManager.instance.readExternal(this, element)
         XmlSerializer.deserializeInto(this, element)
         XmlSerializer.deserializeInto(myData, element)
-
         readModule(element)
         EnvironmentVariablesComponent.readExternal(element, envs)
     }
@@ -183,7 +183,7 @@ class EvmRunConfiguration(
 
 
         fun setContractWrapperName(wrapper: String) {
-            this.contractWrapperName = wrapper.javaClass.name
+            this.contractWrapperName = wrapper
         }
 
         fun getContractWrapperName(): String = contractWrapperName ?: ""
@@ -217,6 +217,7 @@ class EvmRunConfiguration(
         fun setContract(contract: SolContractDefinition) {
             this.contractName = contract.name
             this.contractFile = contract.containingFile.virtualFile.path
+
         }
 
         fun getWorkingDirectory(): String = ExternalizablePath.localPathValue(workingDirectory)
