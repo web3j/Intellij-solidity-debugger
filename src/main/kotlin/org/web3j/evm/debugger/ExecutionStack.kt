@@ -12,11 +12,11 @@
  */
 package org.web3j.evm.debugger
 
+import com.intellij.openapi.project.Project
 import com.intellij.xdebugger.frame.XExecutionStack
 import com.intellij.xdebugger.frame.XStackFrame
 
-class ExecutionStack(stackFrameList: List<XStackFrame>)
-    :XExecutionStack("Webj3EVMStack") {
+class ExecutionStack(stackFrameList: List<XStackFrame>, project: Project) : XExecutionStack("Webj3EVMStack") {
 
     private var topFrame: XStackFrame? = null
 

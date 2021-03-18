@@ -14,6 +14,8 @@ package org.web3j.evm.debugger
 
 import com.intellij.execution.ui.ConsoleViewContentType
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.vfs.LocalFileSystem
+import com.intellij.util.io.exists
 import com.intellij.xdebugger.XDebugProcess
 import com.intellij.xdebugger.XDebugSession
 import com.intellij.xdebugger.XDebuggerManager
@@ -24,11 +26,13 @@ import com.intellij.xdebugger.breakpoints.XLineBreakpoint
 import com.intellij.xdebugger.breakpoints.XLineBreakpointType
 import com.intellij.xdebugger.evaluation.XDebuggerEditorsProvider
 import com.intellij.xdebugger.frame.XSuspendContext
-import me.serce.solidity.ide.run.SolidityRunConfig
+import com.intellij.xdebugger.ui.XDebugTabLayouter
 import org.web3j.abi.datatypes.Address
 import org.web3j.crypto.Credentials
+import org.web3j.crypto.WalletUtils
 import org.web3j.evm.Configuration
 import org.web3j.evm.EmbeddedWeb3jService
+import org.web3j.evm.debugger.run.EvmRunConfiguration
 import org.web3j.protocol.Web3j
 import org.web3j.protocol.core.RemoteCall
 import org.web3j.tx.gas.ContractGasProvider
@@ -36,13 +40,13 @@ import org.web3j.tx.gas.DefaultGasProvider
 import java.io.BufferedReader
 import java.io.File
 import java.net.URLClassLoader
+import java.nio.file.Paths
 import kotlin.reflect.jvm.kotlinFunction
 
 class Web3jDebugProcess constructor(session: XDebugSession) : XDebugProcess(session) {
 
     private val breakpointHandler = SolidityLineBreakpointHandler(this)
     private val breakpoints = mutableListOf<XLineBreakpoint<*>>()
-
     private var operationTracer = SolidityDebugTracer()
     private lateinit var web3j: Web3j
     override fun getEditorsProvider(): XDebuggerEditorsProvider {
@@ -60,17 +64,8 @@ class Web3jDebugProcess constructor(session: XDebugSession) : XDebugProcess(sess
     }
 
     private fun startWeb3jEmbeddedService() {
-        val workingDir = getRunConfig().workingDirectory as String
-        /*
-        var walletFile = "$workingDir/${getRunConfig().name}_wallet.json"
-        if (!Paths.get(walletFile).exists()) {
-            val newWallet = "$workingDir/" + WalletUtils
-                .generateNewWalletFile("Password123", File(workingDir))
-            File(newWallet).renameTo(File(walletFile))
-        }
-        consolePrint(walletFile)
-         */
-        val credentials = Credentials.create("8956cf546a960f49ce61ec2bcc892565355a67cb9cd9830bc5a674fb5e2d8e1e")
+        val evmRunConfig = getRunConfig()
+        val credentials = resolveCredentials()
         val configuration = Configuration(Address(credentials.address), 10)
 
         val web3jService = EmbeddedWeb3jService(configuration, operationTracer)
@@ -81,7 +76,7 @@ class Web3jDebugProcess constructor(session: XDebugSession) : XDebugProcess(sess
             arrayOf(classesDir.toURI().toURL()),
             this.javaClass.classLoader
         )
-        val contractClass = cl.loadClass("org.web3j.greeter.Greeter")
+        val contractClass = cl.loadClass(evmRunConfig.getPersistentData().contractWrapperName)
         val _deploy = contractClass.getMethod(
             "deploy",
             Web3j::class.java,
@@ -93,11 +88,35 @@ class Web3jDebugProcess constructor(session: XDebugSession) : XDebugProcess(sess
                 as RemoteCall<*>
         consolePrint("Deployed Contract ${instance.send()}")
         operationTracer.parseBreakPointOption("break list")
-        operationTracer
+
     }
 
-    private fun getRunConfig(): SolidityRunConfig {
-        val runConfig = session.runProfile as SolidityRunConfig
+
+    private fun resolveCredentials(): Credentials {
+        val evmRunConfig = getRunConfig()
+        var walletFile = "${evmRunConfig.getPersistentData().workingDirectory}/${getRunConfig().name}_wallet.json"
+        if (!evmRunConfig.getPersistentData().walletPath.isNullOrBlank()) {
+            return WalletUtils.loadCredentials(
+                evmRunConfig.getPersistentData().walletPassword,
+                evmRunConfig.getPersistentData().walletPath
+            )
+        } else if (!evmRunConfig.getPersistentData().privateKey.isNullOrBlank()) {
+            return Credentials.create(evmRunConfig.getPersistentData().getPrivateKey())
+        } else {
+            if (!Paths.get(walletFile).exists()) {
+                val generatedWallet = WalletUtils
+                    .generateNewWalletFile("Password123", File(evmRunConfig.getPersistentData().workingDirectory!!))
+                val newWallet = "${evmRunConfig.getPersistentData().workingDirectory}/" + generatedWallet
+                File(newWallet).renameTo(File(walletFile))
+                return WalletUtils.loadCredentials("Password123", walletFile)
+            }
+            return WalletUtils.loadCredentials("Password123", walletFile)
+        }
+        TODO("Make this more readable")
+    }
+
+    private fun getRunConfig(): EvmRunConfiguration {
+        val runConfig = session.runProfile as EvmRunConfiguration
         println("Working directory: ${runConfig.workingDirectory}")
         consolePrint(
             "Contract Name/File:" +
@@ -110,6 +129,7 @@ class Web3jDebugProcess constructor(session: XDebugSession) : XDebugProcess(sess
     private fun debug() {
         ApplicationManager.getApplication().executeOnPooledThread {
             val reader = BufferedReader(operationTracer.getOutputAsStream().reader())
+            suspend()
             val content = StringBuilder()
             reader.use { reader ->
                 var line = reader.readLine()
@@ -119,7 +139,6 @@ class Web3jDebugProcess constructor(session: XDebugSession) : XDebugProcess(sess
                     consolePrint(line)
                 }
             }
-            suspend()
         }
     }
 
@@ -131,7 +150,21 @@ class Web3jDebugProcess constructor(session: XDebugSession) : XDebugProcess(sess
     private fun suspend() {
         ApplicationManager.getApplication().runReadAction {
             val contractFile = getRunConfig().getPersistentData().contractFile as String
-            val suspendContext = SoliditySuspendContext(ExecutionStack(listOf(SolidityStackFrame())))
+            val virtualContractFile =
+                LocalFileSystem.getInstance().findFileByIoFile(File(getRunConfig().getPersistentData().contractFile!!))
+            val messageFrame = operationTracer.getMessageFrame()
+            val suspendContext =
+                SoliditySuspendContext(
+                    ExecutionStack(
+                        listOf(
+                            SolidityStackFrame(
+                                virtualContractFile,
+                                5
+                            )
+                        )
+                    )
+                )
+
             consolePrint("Current stack ${session.currentStackFrame}")
             val breakpoint = findBreakpoint(contractFile, 5)
             if (breakpoint != null) {
@@ -200,9 +233,14 @@ class Web3jDebugProcess constructor(session: XDebugSession) : XDebugProcess(sess
 
     override fun startStepOver(context: XSuspendContext?) {
         println("step over..")
-        //session.ui.component.componentPopupMenu.
-        //operationTracer.reader.read("next".toCharArray())
+        session.debugProcess.logStack(context!!, this.session)
+        // session.setCurrentStackFrame()
         debug()
     }
+
+    override fun createTabLayouter(): XDebugTabLayouter {
+        return super.createTabLayouter()
+    }
+
 
 }

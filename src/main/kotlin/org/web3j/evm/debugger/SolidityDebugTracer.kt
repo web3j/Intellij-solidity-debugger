@@ -58,6 +58,7 @@ open class SolidityDebugTracer(protected val metaFile: File?, val reader: Buffer
     private var showStack = true
     private var lastSourceFile = SourceFile()
     private var lastSourceMapElement: SourceMapElement? = null
+    private var messageFrameToBeUpdated = mutableListOf<MessageFrame>()
 
     private enum class TERMINAL constructor(private val escapeSequence: String) {
         ANSI_RESET("\u001B[0m"),
@@ -85,6 +86,10 @@ open class SolidityDebugTracer(protected val metaFile: File?, val reader: Buffer
 
     fun getBreakPointMap(): MutableMap<String, MutableSet<Int>> {
         return this.breakPoints
+    }
+
+    fun getMessageFrame(): List<MessageFrame> {
+        return this.messageFrameToBeUpdated
     }
 
     fun getOutputAsStream(): ByteArrayInputStream {
@@ -710,7 +715,7 @@ open class SolidityDebugTracer(protected val metaFile: File?, val reader: Buffer
 
     override fun traceExecution(messageFrame: MessageFrame, executeOperation: OperationTracer.ExecuteOperation?) {
         val finalOutput = nextOption(messageFrame)
-
+        updateMessageFrame(messageFrame)
         executeOperation?.execute()
         if (messageFrame.state != MessageFrame.State.CODE_EXECUTING) {
             skipOperations.set(0)
@@ -719,5 +724,10 @@ open class SolidityDebugTracer(protected val metaFile: File?, val reader: Buffer
             println(finalOutput)
             inputStream = finalOutput.byteInputStream()
         }
+    }
+
+    private fun updateMessageFrame(messageFrame: MessageFrame) {
+        messageFrameToBeUpdated.add(messageFrame)
+
     }
 }

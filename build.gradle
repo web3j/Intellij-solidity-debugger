@@ -14,7 +14,6 @@ ext {
 }
 
 repositories {
-    mavenLocal()
     jcenter()
     mavenCentral()
     maven {
@@ -26,10 +25,10 @@ dependencies {
     implementation fileTree(dir: 'libs', include: ['log4j-api-3.0.0-SNAPSHOT.jar'])
 
     implementation "com.beust:klaxon:5.0.1"
-    implementation "org.jetbrains.kotlin:kotlin-stdlib"
-    implementation "org.jetbrains.kotlin:kotlin-reflect:1.4.10"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:1.4.30"
+    implementation "org.jetbrains.kotlin:kotlin-reflect:1.4.30"
     implementation "org.web3j:core:4.8.4"
-    implementation "org.web3j:web3j-evm:4.8.5-SNAPSHOT"
+    implementation "org.web3j:web3j-evm:4.8.5"
 
     implementation "org.hyperledger.besu:plugin-api:$besuPluginVersion"
     implementation "org.hyperledger.besu.internal:api:$besuInternalVersion"
@@ -42,9 +41,11 @@ dependencies {
     implementation "org.hyperledger.besu.internal:trie:$besuInternalVersion"
     implementation "org.hyperledger.besu.internal:util:$besuInternalVersion"
     implementation "org.hyperledger.besu:bls12-381:$besuCryptoDepVersion"
-
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.6.0'
+    implementation 'org.mockito:mockito-core:3.8.0'
+    testImplementation("org.junit.jupiter:junit-jupiter:5.7.0")
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+    testImplementation group: 'org.jetbrains.kotlin', name: 'kotlin-test-junit', version: '1.5.0-M1'
+
 }
 
 configurations {
@@ -53,6 +54,7 @@ configurations {
         //exclude group:"org.apache.logging.log4j", module:"slf4j-to-log4j12"
         //exclude group:"org.apache.logging.log4j", module:"log4j-api"
     }
+
 }
 
 // See https://github.com/JetBrains/gradle-intellij-plugin/
@@ -71,6 +73,7 @@ compileKotlin {
     kotlinOptions.jvmTarget = "1.8"
 }
 
+
 patchPluginXml {
     changeNotes """
       Add change notes here.<br>
@@ -78,4 +81,9 @@ patchPluginXml {
 }
 test {
     useJUnitPlatform()
+}
+
+tasks.withType(Test) {
+    useJUnitPlatform()
+
 }

@@ -10,6 +10,8 @@ import com.intellij.execution.ui.DefaultJreSelector
 import com.intellij.execution.ui.JrePathEditor
 import com.intellij.ide.util.TreeFileChooserFactoryImpl
 import com.intellij.ide.util.TreeJavaClassChooserDialog
+import com.intellij.json.JsonFileType
+import com.intellij.json.psi.JsonFile
 import com.intellij.openapi.options.SettingsEditor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.ComponentWithBrowseButton
@@ -36,15 +38,14 @@ class EvmSettingsEditorPanel(private val project: Project) : SettingsEditor<EvmR
     private var myModel: EvmRunConfigurationModel = EvmRunConfigurationModel(project)
     private lateinit var myModule: LabeledComponent<ModulesComboBox>
     private lateinit var commonJavaParametersPanel: CommonJavaParametersPanel
-    private lateinit var solidityContract: LabeledComponent<EditorTextFieldWithBrowseButton>
-    private lateinit var contractWrapper: LabeledComponent<EditorTextFieldWithBrowseButton>
-    private lateinit var wrappedMethod: LabeledComponent<EditorTextFieldWithBrowseButton>
-    private lateinit var walletPath: LabeledComponent<EditorTextFieldWithBrowseButton>
-    private lateinit var walletPassword: LabeledComponent<JTextField>
-    private lateinit var privateKey: LabeledComponent<JTextField>
+    lateinit var solidityContract: LabeledComponent<EditorTextFieldWithBrowseButton>
+    lateinit var contractWrapper: LabeledComponent<EditorTextFieldWithBrowseButton>
+    lateinit var wrappedMethod: LabeledComponent<EditorTextFieldWithBrowseButton>
+    lateinit var walletPath: LabeledComponent<EditorTextFieldWithBrowseButton>
+    lateinit var walletPassword: LabeledComponent<JTextField>
+    lateinit var privateKey: LabeledComponent<JTextField>
     private lateinit var myJrePathEditor: JrePathEditor
     private var browsers = arrayListOf<BrowseModuleValueActionListener<JComponent>>()
-
     private val modulesComponent: ModulesComboBox
         get() = myModule.component
 
@@ -56,32 +57,25 @@ class EvmSettingsEditorPanel(private val project: Project) : SettingsEditor<EvmR
         myModule.component.addActionListener { commonJavaParametersPanel.setModuleContext(moduleSelector.module) }
         myModel.setListener(this)
         setUpListeners()
+
     }
 
     override fun applyEditorTo(configuration: EvmRunConfiguration) {
-        val data = configuration.getPersistentData()
-        myModel.apply(configuration)
-        data.setContractWrapperName(contractWrapper.component.text)
-        data.setMethodWrapperName(wrappedMethod.component.text)
-        data.setWalletPath(walletPath.component.text)
-        data.setWalletPassword(walletPassword.component.text)
-        data.setPrivateKey(privateKey.component.text)
+        myModel.apply(configuration, this)
         commonJavaParametersPanel.applyTo(configuration)
         moduleSelector.applyTo(configuration)
         configuration.alternativeJrePath = myJrePathEditor.jrePathOrName
         configuration.isAlternativeJrePathEnabled = myJrePathEditor.isAlternativeJreSelected
-        commonJavaParametersPanel.applyTo(configuration)
 
     }
 
     override fun resetEditorFrom(configuration: EvmRunConfiguration) {
-        myModel.reset(configuration)
+        myModel.reset(configuration,this)
         commonJavaParametersPanel.reset(configuration)
         moduleSelector.reset(configuration)
         myJrePathEditor.setPathOrName(configuration.alternativeJrePath, configuration.isAlternativeJrePathEnabled)
 
     }
-
 
     override fun createEditor(): JComponent {
         return mainPanel
@@ -92,7 +86,6 @@ class EvmSettingsEditorPanel(private val project: Project) : SettingsEditor<EvmR
     }
 
     override fun setAnchor(anchor: JComponent?) {
-        this.anchor = anchor
         solidityContract.anchor = anchor
         contractWrapper.anchor = anchor
         wrappedMethod.anchor = anchor
@@ -167,7 +160,7 @@ class EvmSettingsEditorPanel(private val project: Project) : SettingsEditor<EvmR
         }
 
         override fun getFilter(testClass: PsiClass): Condition<PsiMethod> {
-            return Condition { obj: PsiMethod -> obj.isValid }
+            return Condition { obj: PsiMethod -> obj.isValid && !obj.isDeprecated }
         }
     }
 
@@ -176,7 +169,7 @@ class EvmSettingsEditorPanel(private val project: Project) : SettingsEditor<EvmR
         var treeFileChooserFactory: TreeFileChooserFactoryImpl = TreeFileChooserFactoryImpl(project)
         override fun showDialog(): String? {
             val fileChooser =
-                treeFileChooserFactory.createFileChooser("Select your wallet.", null, SolidityFileType, null)
+                treeFileChooserFactory.createFileChooser("Select your wallet.", null, JsonFileType.INSTANCE, null)
             fileChooser.showDialog()
             return fileChooser.selectedFile!!.originalFile.virtualFile.path
         }
