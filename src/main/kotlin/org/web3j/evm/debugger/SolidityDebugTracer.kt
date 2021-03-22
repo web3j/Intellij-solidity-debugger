@@ -14,7 +14,9 @@ package org.web3j.evm.debugger
 
 import com.beust.klaxon.Klaxon
 import org.apache.tuweni.bytes.Bytes32
+import org.apache.tuweni.units.bigints.UInt256
 import org.hyperledger.besu.ethereum.vm.MessageFrame
+import org.hyperledger.besu.ethereum.vm.Operation
 import org.hyperledger.besu.ethereum.vm.OperationTracer
 import org.web3j.evm.ExceptionalHaltException
 import java.io.*
@@ -51,8 +53,6 @@ data class SourceMapElement(
 
 // TODO: refactor this class, seperate debug actions from solidity source code mapping
 class SolidityDebugTracer(private val debugProcess: Web3jDebugProcess) : OperationTracer {
-    private val operations = ArrayList<String>()
-    private val skipOperations = AtomicInteger()
     private var breakPoints = mutableMapOf<String, MutableSet<Int>>()
     private val byteCodeContractMapping = HashMap<Pair<String, Boolean>, ContractMapping>()
     private var runTillNextLine = false
@@ -61,7 +61,9 @@ class SolidityDebugTracer(private val debugProcess: Web3jDebugProcess) : Operati
     private var lastSelectedLine = 0
     private val commandQueue: BlockingQueue<String> = LinkedBlockingDeque()
     private val stackFrames = mutableListOf<SolidityStackFrame>()
-    private var metaFile: File = File("${debugProcess.getRunConfig().workingDirectory}/build/resources/main/solidity")
+    private var metaFile: File =
+        File("${debugProcess.getRunConfig().workingDirectory}/build/resources/main/solidity")
+    private val UINT256_32: UInt256 = UInt256.valueOf(32)
 
     fun setBreakpoints(breakpoints: MutableMap<String, MutableSet<Int>>) {
         this.breakPoints = breakpoints
@@ -321,8 +323,8 @@ class SolidityDebugTracer(private val debugProcess: Web3jDebugProcess) : Operati
     }
 
     @Throws(ExceptionalHaltException::class)
-    private fun step(messageFrame: MessageFrame): String {
-        val (sourceMapElement, sourceFile) = sourceAtMessageFrame(messageFrame)
+    private fun step(frame: MessageFrame): String {
+        val (sourceMapElement, sourceFile) = sourceAtMessageFrame(frame)
         val (filePath, sourceSection) = sourceFile
 
         val firstSelectedLine =
@@ -331,35 +333,39 @@ class SolidityDebugTracer(private val debugProcess: Web3jDebugProcess) : Operati
 
         val sb = StringBuilder()
         if (sourceMapElement != null) sb
-            .append("At solidity source location" +
+            .append("At solidity source" +
                     " ${sourceMapElement.sourceFileByteOffset}:${sourceMapElement.lengthOfSourceRange}:${sourceMapElement.sourceIndex}:")
 
         sb.append("Line $firstSelectedLine:$firstSelectedOffset")
-        println(sb.toString())
+
+        val content = captureStack(frame)
+
+        debugProcess.consolePrint("${frame.pc} ${frame.currentOperation.name} ${frame.currentOperation.opcode}")
+
+        content.forEach {
+            debugProcess.consolePrint("${it?.toHexString()}")
+        }
 
         when (commandQueue.take()) {
             "execute" -> {
                if (runTillNextLine && firstSelectedLine == lastSelectedLine) {
-                   updateStackFrame("" + filePath, firstSelectedLine, messageFrame)
                    debugProcess.suspend(firstSelectedLine)
                } else if (runTillNextLine) {
                    runTillNextLine = false
                    commandQueue.put("suspend")
-                   updateStackFrame("" + filePath, firstSelectedLine, messageFrame)
-                   return step(messageFrame)
+                   updateStackFrame("" + filePath, firstSelectedLine, frame)
+                   return step(frame)
                }
                else if (breakPoints.values.any { it.contains(firstSelectedLine) }) {
                    commandQueue.put("suspend")
-                   updateStackFrame("" + filePath, firstSelectedLine, messageFrame)
-                   return step(messageFrame)
+                   return step(frame)
                 }
             }
             "suspend" -> {
                 debugProcess.suspend(firstSelectedLine)
-                debugProcess.consolePrint("line $firstSelectedLine offset $firstSelectedOffset")
                 lastSelectedLine = firstSelectedLine
                 runTillNextLine = true
-                return step(messageFrame)
+                return step(frame)
             }
             "stepOver", "stepInto", "stepOut" -> {
                debugProcess.consolePrint("Stepping..")
@@ -380,9 +386,17 @@ class SolidityDebugTracer(private val debugProcess: Web3jDebugProcess) : Operati
         val baseDir = debugProcess.getRunConfig().project.basePath
         val stackFrame = SolidityStackFrame(debugProcess.session.project,
             "$baseDir/$filePath", line)
+
         //TODO: extract stack frame variable names and values
         val content = captureStack(frame)
-        stackFrame.addValue(SolidityValue("x", "String", content.toString()))
+
+        captureMemory(frame).forEach {
+            it.let {
+                val value = it?.toHexString() + " " + it?.toArray()?.let { it1 -> String(it1) }
+                stackFrame.addValue(SolidityValue("memory", "string", value))
+            }
+        }
+
         stackFrames.add(stackFrame)
     }
 
@@ -395,14 +409,20 @@ class SolidityDebugTracer(private val debugProcess: Web3jDebugProcess) : Operati
         return stackContents
     }
 
+    private fun captureMemory(frame: MessageFrame): Array<Bytes32?> {
+        val memoryContents: Array<Bytes32?> = arrayOfNulls(frame.memoryWordSize().intValue())
+        for (i in memoryContents.indices) {
+            memoryContents[i] = frame.readMemory(UInt256.valueOf(i * 32L), UINT256_32) as Bytes32?
+        }
+        return memoryContents
+    }
+
     override fun traceExecution(messageFrame: MessageFrame, executeOperation: OperationTracer.ExecuteOperation?) {
         commandQueue.put("execute")
         step(messageFrame)
 
         executeOperation?.execute()
         if (messageFrame.state != MessageFrame.State.CODE_EXECUTING) {
-            skipOperations.set(0)
-            operations.clear()
             runTillNextLine = false
         }
     }
