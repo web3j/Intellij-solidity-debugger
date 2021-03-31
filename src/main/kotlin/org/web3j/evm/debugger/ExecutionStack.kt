@@ -12,6 +12,7 @@
  */
 package org.web3j.evm.debugger
 
+import com.intellij.openapi.editor.markup.GutterIconRenderer
 import com.intellij.xdebugger.frame.XExecutionStack
 import com.intellij.xdebugger.frame.XStackFrame
 import com.intellij.xdebugger.impl.frame.XStackFrameContainerEx
@@ -22,8 +23,8 @@ class ExecutionStack(private val stackFrameList: List<SolidityStackFrame>)
     private var topFrame: XStackFrame? = null
 
     init {
-      if (stackFrameList.isNotEmpty())
-         topFrame = stackFrameList[0]
+        if (stackFrameList.isNotEmpty())
+            topFrame = stackFrameList[stackFrameList.size - 1]
     }
 
     /**

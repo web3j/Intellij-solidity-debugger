@@ -14,6 +14,7 @@ package org.web3j.evm.debugger
 
 import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiFileFactory
@@ -23,6 +24,9 @@ import me.serce.solidity.lang.SolidityFileType
 class DebuggerEditorsProvider : XDebuggerEditorsProviderBase() {
     override fun getFileType(): FileType {
         return SolidityFileType
+    }
+    override fun getContextElement(virtualFile: VirtualFile, offset: Int, project: Project): PsiElement? {
+        return super.getContextElement(virtualFile, offset, project)
     }
 
     override fun createExpressionCodeFragment(
