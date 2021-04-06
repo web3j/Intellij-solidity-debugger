@@ -14,7 +14,12 @@ package org.web3j.evm.debugger
 
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.xdebugger.XSourcePosition
+import com.intellij.xdebugger.breakpoints.XBreakpoint
+import com.intellij.xdebugger.breakpoints.XBreakpointProperties
+import com.intellij.xdebugger.breakpoints.XLineBreakpoint
 import com.intellij.xdebugger.breakpoints.XLineBreakpointTypeBase
+import com.intellij.xdebugger.evaluation.XDebuggerEditorsProvider
 import me.serce.solidity.lang.SolidityFileType
 
 class SolidityLineBreakpointType : XLineBreakpointTypeBase(ID, NAME, DebuggerEditorsProvider()) {
@@ -24,8 +29,24 @@ class SolidityLineBreakpointType : XLineBreakpointTypeBase(ID, NAME, DebuggerEdi
         return file.fileType === SolidityFileType
     }
 
+    override fun getSourcePosition(breakpoint: XBreakpoint<XBreakpointProperties<Any>>): XSourcePosition? {
+        return super.getSourcePosition(breakpoint)
+    }
+
+    override fun getEditorsProvider(
+        breakpoint: XLineBreakpoint<XBreakpointProperties<Any>>,
+        project: Project
+    ): XDebuggerEditorsProvider? {
+        return super.getEditorsProvider(breakpoint, project)
+    }
+
+    override fun getDisplayText(breakpoint: XLineBreakpoint<XBreakpointProperties<Any>>?): String {
+        return super.getDisplayText(breakpoint)
+    }
+
     companion object {
         private const val ID = "solidity-line"
         private const val NAME = "solidity-line-breakpoint"
     }
+
 }

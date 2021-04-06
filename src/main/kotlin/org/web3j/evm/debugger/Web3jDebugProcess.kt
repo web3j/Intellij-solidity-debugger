@@ -14,6 +14,12 @@ package org.web3j.evm.debugger
 
 import com.intellij.execution.ui.ConsoleViewContentType
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.editor.markup.TextAttributes
+import com.intellij.openapi.fileEditor.FileEditor
+import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.project.Project
+import com.intellij.psi.search.FilenameIndex
+import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.util.io.exists
 import com.intellij.xdebugger.XDebugProcess
 import com.intellij.xdebugger.XDebugSession
@@ -25,7 +31,6 @@ import com.intellij.xdebugger.breakpoints.XLineBreakpoint
 import com.intellij.xdebugger.breakpoints.XLineBreakpointType
 import com.intellij.xdebugger.evaluation.XDebuggerEditorsProvider
 import com.intellij.xdebugger.frame.XSuspendContext
-import me.serce.solidity.ide.run.SolidityRunConfig
 import org.hyperledger.besu.ethereum.vm.OperationTracer
 import org.web3j.abi.datatypes.Address
 import org.web3j.crypto.Credentials
@@ -38,20 +43,22 @@ import org.web3j.protocol.core.RemoteCall
 import org.web3j.tx.gas.ContractGasProvider
 import org.web3j.tx.gas.DefaultGasProvider
 import java.io.File
+import java.math.BigInteger
 import java.net.URLClassLoader
 import java.nio.file.Paths
 import kotlin.reflect.jvm.kotlinFunction
+
 
 class Web3jDebugProcess constructor(session: XDebugSession) : XDebugProcess(session) {
 
     private val breakpointHandler = SolidityLineBreakpointHandler(this)
     private val breakpoints = mutableListOf<XLineBreakpoint<*>>()
-
+    private val debuggerEditorsProvider = DebuggerEditorsProvider()
     private var operationTracer: SolidityDebugTracer = SolidityDebugTracer(this)
     private lateinit var web3j: Web3j
 
     override fun getEditorsProvider(): XDebuggerEditorsProvider {
-        return DebuggerEditorsProvider()
+        return debuggerEditorsProvider
     }
 
     override fun getBreakpointHandlers(): Array<XBreakpointHandler<*>?> {
