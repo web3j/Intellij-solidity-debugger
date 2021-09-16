@@ -17,7 +17,7 @@ repositories {
     jcenter()
     mavenCentral()
     maven {
-        url = uri("https://hyperledger-org.bintray.com/besu-repo/")
+        url = uri("https://hyperledger.jfrog.io/hyperledger/besu-maven")
     }
 }
 
