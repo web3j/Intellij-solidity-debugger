@@ -82,6 +82,7 @@ class Web3jDebugProcess constructor(session: XDebugSession) : XDebugProcess(sess
     }
 
     private fun startWeb3jEmbeddedService() {
+        // HERE
         val workingDir = getRunConfig().workingDirectory as String
 
         val (config, credentials) =

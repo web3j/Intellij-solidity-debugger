@@ -63,7 +63,11 @@ class EvmRunConfiguration(
     }
 
     override fun setWorkingDirectory(workingDir: String?) {
-        myData.setWorkingDirectory(workingDir)
+        if (workingDir.isNullOrEmpty()) {
+            myData.setWorkingDirectory(this.project.basePath)
+        } else {
+            myData.setWorkingDirectory(workingDir)
+        }
     }
 
     override fun getWorkingDirectory(): String? {
