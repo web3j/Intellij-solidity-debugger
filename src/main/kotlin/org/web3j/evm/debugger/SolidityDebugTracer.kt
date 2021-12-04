@@ -14,15 +14,21 @@ package org.web3j.evm.debugger
 
 import com.beust.klaxon.Klaxon
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.psi.PsiVariable
 import com.intellij.psi.util.PsiTreeUtil
+import com.intellij.psi.util.elementType
 import com.intellij.xdebugger.evaluation.EvaluationMode
 import me.serce.solidity.lang.psi.SolElement
+import me.serce.solidity.lang.psi.impl.SolConstructorDefinitionImpl
+import me.serce.solidity.lang.psi.impl.SolContractDefinitionImpl
+import me.serce.solidity.lang.psi.impl.SolVarLiteralImpl
 import org.apache.tuweni.bytes.Bytes32
 import org.apache.tuweni.units.bigints.UInt256
 import org.hyperledger.besu.ethereum.vm.MessageFrame
 import org.hyperledger.besu.ethereum.vm.OperationTracer
 import org.web3j.evm.ExceptionalHaltException
-import org.web3j.evm.debugger.mapping.utils.resolveContext
+import org.web3j.evm.debugger.mapping.utils.*
+import org.web3j.protocol.core.DefaultBlockParameter
 import java.io.BufferedReader
 import java.io.File
 import java.io.FileReader
@@ -30,6 +36,10 @@ import java.util.*
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.LinkedBlockingDeque
 import kotlin.math.min
+
+
+import com.intellij.psi.util.PsiElementFilter
+import me.serce.solidity.lang.psi.SolConstructorDefinition
 
 data class ContractMeta(val contracts: Map<String, Map<String, String>>, val sourceList: List<String>)
 
@@ -102,13 +112,14 @@ class SolidityDebugTracer(private val debugProcess: Web3jDebugProcess) : Operati
             }
             "suspend" -> {
                 debugProcess.suspend(firstSelectedLine)
-                debugProcess
+
                 lastSelectedLine = firstSelectedLine
                 runTillNextLine = true
 
                 return step(frame)
             }
             "stepOver", "stepInto", "stepOut" -> {
+
                 debugProcess.consolePrint("Stepping..")
             }
         }
@@ -141,17 +152,131 @@ class SolidityDebugTracer(private val debugProcess: Web3jDebugProcess) : Operati
             it.let {
                 val value = it?.toHexString() + " " + it?.toArray()?.let { it1 -> String(it1) }
                  stackFrame.addValue(SolidityValue("memory", "string", value))
+                //println("Memory " + value)
+
             }
         }
+        //printMemoryVariables(stackFrame.sourcePosition as SoliditySourcePosition)
+        printInterestingData(frame)
         stackFrames.add(stackFrame)
+
     }
 
+    fun printMemoryVariables(pos: SoliditySourcePosition){
+
+
+        val psiElement = pos.getPsiElementAtPosition()
+        val parent = PsiTreeUtil.getParentOfType(
+            psiElement,
+            SolElement::class.java
+        )
+        val parentofParent = PsiTreeUtil.getParentOfType(
+            parent,
+            SolElement::class.java
+        )
+        println("Element type : " + psiElement.elementType)
+        println("Element parent type : " + parent.elementType)
+        println("Element parent of parent type : " + parentofParent.elementType)
+
+        when (psiElement) {
+            is SolConstructorDefinitionImpl -> {
+
+                PsiTreeUtil.collectElements(psiElement, PsiElementFilter { e ->
+                    if (e is PsiVariable) {
+                        println("Local var: " + e.toString())
+                        true
+                    } else false
+                })
+
+            }
+        }
+        when (parent) {
+            is SolConstructorDefinitionImpl -> {
+                println("Memory var :" + parent.parameterList.toString())
+                parent.parameterList?.parameterDefList?.forEach{
+                    it.let{
+                        println("memory var : type: " + it.typeName.text + " name: "+ it.name)
+                    }
+                }
+
+/*
+                 PsiTreeUtil.collectElements(parent, PsiElementFilter { e ->
+                    if (e is PsiVariable) {
+                        println("Local var: " + e.toString())
+                        true
+                    } else false
+                })
+
+ */
+
+
+            }
+            is SolContractDefinitionImpl -> {
+                println("Storage var: " )
+                parent.stateVariableDeclarationList.forEach{
+                    it.let{
+                        println("Storage var : type " + it.typeName.text + " name: "+ it.name)
+                    }
+                }
+
+            }
+        }
+
+    }
+    private fun printInterestingData(frame: MessageFrame) {
+        val stack = captureStack(frame)
+        stack.forEach {
+            it.let {
+                val value = it?.toHexString() + it?.toArray().let { it1 -> it1.toString()}
+                //println("Stack " + value)
+            }
+        }
+        val state = frame.state
+        println("State :" + state.name)
+        val  contractAddress = frame.contractAddress.toString()
+        println("Contract Address :" + frame.contractAddress.toString())
+        println("Sender address :" + frame.senderAddress)
+
+
+/*
+        for (index in 0..4){
+            val value = debugProcess.web3j.ethGetStorageAt(contractAddress,index.toBigInteger(), DefaultBlockParameter.valueOf("latest") ).send().toString()
+frame.memoryByteSize()
+            println("values at index $index is $value ")
+
+
+
+        }
+
+ */
+
+        return
+    }
+
+    private fun captureCallData(frame: MessageFrame): Array<Bytes32?> {
+
+        val stackContents = arrayOfNulls<Bytes32>(frame.stackSize())
+        for (i in stackContents.indices) {
+            // Record stack contents in reverse
+            stackContents[i] = frame.getStackItem(stackContents.size - i - 1)
+        }
+
+        return stackContents
+    }
     private fun captureStack(frame: MessageFrame): Array<Bytes32?> {
         val stackContents = arrayOfNulls<Bytes32>(frame.stackSize())
         for (i in stackContents.indices) {
             // Record stack contents in reverse
             stackContents[i] = frame.getStackItem(stackContents.size - i - 1)
         }
+        stackContents.forEach {
+            it.let {
+                val value = it?.toHexString() + " " + it?.toArray()?.let { it1 -> String(it1) }
+                println("Stack " + value)
+            }
+        }
+
+        //println("Stack " + stackContents)
         return stackContents
     }
 
@@ -160,6 +285,13 @@ class SolidityDebugTracer(private val debugProcess: Web3jDebugProcess) : Operati
         for (i in memoryContents.indices) {
             memoryContents[i] = frame.readMemory(UInt256.valueOf(i * 32L), UINT256_32) as Bytes32?
         }
+        memoryContents.forEach {
+            it.let {
+                val value = it?.toHexString() + " " + it?.toArray()?.let { it1 -> String(it1) }
+                println("Memory " + value)
+            }
+        }
+        //println("Memory " + memoryContents)
         return memoryContents
     }
 
@@ -197,6 +329,9 @@ class SolidityDebugTracer(private val debugProcess: Web3jDebugProcess) : Operati
             sourcePosition.getPsiElementAtPosition(),
             SolElement::class.java
         )
+
+//        println("src pos " + sourcePosition  +  "  type " + sourcePosition.getPsiElementAtPosition().elementType + " par type  " + parent.elementType)
+
         resolveContext(parent!!, stackFrame)
     }
 
@@ -421,6 +556,7 @@ class SolidityDebugTracer(private val debugProcess: Web3jDebugProcess) : Operati
     }
 
     private fun loadFile(debugProcess: Web3jDebugProcess, path: String): SortedMap<Int, ContractLine> {
+
         val baseDir = debugProcess.getRunConfig().project.basePath
         return BufferedReader(FileReader("$baseDir/$path")).use { reader ->
             reader.lineSequence()

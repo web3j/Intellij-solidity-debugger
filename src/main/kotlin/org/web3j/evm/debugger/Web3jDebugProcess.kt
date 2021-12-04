@@ -55,7 +55,7 @@ class Web3jDebugProcess constructor(session: XDebugSession) : XDebugProcess(sess
     private val breakpoints = mutableListOf<XLineBreakpoint<*>>()
     private val debuggerEditorsProvider = DebuggerEditorsProvider()
     private var operationTracer: SolidityDebugTracer = SolidityDebugTracer(this)
-    private lateinit var web3j: Web3j
+    lateinit var web3j: Web3j
 
     override fun getEditorsProvider(): XDebuggerEditorsProvider {
         return debuggerEditorsProvider
@@ -95,6 +95,9 @@ class Web3jDebugProcess constructor(session: XDebugSession) : XDebugProcess(sess
             val web3jService = EmbeddedWeb3jService(config, operationTracer as OperationTracer)
             web3j = Web3j.build(web3jService)
 
+            //web3j.ethGetStorageAt()
+
+
             consolePrint("EmbeddedWeb3jService started ${web3j}")
 
             val classesDir = File("${workingDir}/build/classes/java/main")
@@ -113,8 +116,10 @@ class Web3jDebugProcess constructor(session: XDebugSession) : XDebugProcess(sess
                 String::class.java
             )
 
-            val instance = deploy.kotlinFunction?.call(web3j, credentials, DefaultGasProvider(), "Hello!")
+            val instance = deploy.kotlinFunction?.call(web3j, credentials, DefaultGasProvider(), "Hello123!")
                     as RemoteCall<*>
+
+
 
             consolePrint("Deployed Contract ${instance.send()}")
         }
