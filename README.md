@@ -17,11 +17,39 @@ Build
 ./gradlew buildPlugin
 ```
 
-Run
+Run 
 
 ```
 ./gradlew runIde
 ```
+
+or
+
+```
+With Idea using gradle task, Tasks -> intellij -> runIde (in debugger mode)
+```
+
+After that, it should open a new Idea app with our debugging plugin.
+Open your sample project with a solidity contract.
+
+## Debugging (in a new window )
+
+1) Make sure that Solidity plugin is installed.
+2) Configure solidity preferences:
+   Preferences -> Languages & Frameworks -> Solidity
+    
+    1. Use Solc to build project - true
+    2. Standalone Solc path - "{your path}/bin/solc"
+    3. Generate java stubs for contracts during compilation - true
+    4. Style: Web3J
+    
+3) Configure Run/Debug Configurations
+   1. Add new configuration Evm.
+   2. Fill in the following lines: Name(for example "RunHelloWorld"), Contract Wrapper (for example "HelloWorld"), Solidity Contract (for example "HelloWorld").
+   3. Fill in the field 'Deploy Methods' - "deploy"
+   
+4) Execute Run task('RunHelloWorld') in the debug mode.
+
 
 ## Compatible IDEs
 
