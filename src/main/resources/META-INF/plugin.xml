@@ -27,7 +27,7 @@
         <!--<configurationType implementation=""/>-->
         <configurationType implementation="org.web3j.evm.debugger.run.EvmRunConfigurationType"/>
         <programRunner implementation="org.web3j.evm.debugger.SolidityWeb3jRunner"/>
-        <xdebugger.breakpointType implementation="org.web3j.evm.debugger.SolidityLineBreakpointType"/>
+        <xdebugger.breakpointType implementation="org.web3j.evm.debugger.breakpoint.SolidityBreakPointType"/>
     </extensions>
     <actions>
 

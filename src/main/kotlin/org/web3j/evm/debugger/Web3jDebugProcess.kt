@@ -31,6 +31,8 @@ import org.web3j.crypto.Credentials
 import org.web3j.crypto.WalletUtils
 import org.web3j.evm.Configuration
 import org.web3j.evm.EmbeddedWeb3jService
+import org.web3j.evm.debugger.breakpoint.SolidityBreakPointType
+import org.web3j.evm.debugger.breakpoint.SolidityBreakpointHandler
 import org.web3j.evm.debugger.run.EvmRunConfiguration
 import org.web3j.protocol.Web3j
 import org.web3j.protocol.core.RemoteCall
@@ -43,9 +45,10 @@ import kotlin.reflect.jvm.kotlinFunction
 
 
 class Web3jDebugProcess constructor(session: XDebugSession) : XDebugProcess(session) {
-
-    private val breakpointHandler = SolidityLineBreakpointHandler(this)
+    private val breakpointHandler = SolidityBreakpointHandler()
     private val breakpoints = mutableListOf<XLineBreakpoint<*>>()
+
+
     private val debuggerEditorsProvider = DebuggerEditorsProvider()
     private var operationTracer: SolidityDebugTracer = SolidityDebugTracer(this)
     private lateinit var web3j: Web3j
@@ -54,7 +57,7 @@ class Web3jDebugProcess constructor(session: XDebugSession) : XDebugProcess(sess
         return debuggerEditorsProvider
     }
 
-    override fun getBreakpointHandlers(): Array<XBreakpointHandler<*>?> {
+    override fun getBreakpointHandlers(): Array<XBreakpointHandler<*>> {
         return arrayOf(breakpointHandler)
     }
 
@@ -155,7 +158,7 @@ class Web3jDebugProcess constructor(session: XDebugSession) : XDebugProcess(sess
     private fun findBreakpoint(filePath: String, lineNumber: Int): XLineBreakpoint<out XBreakpointProperties<Any>>? {
         val manager = XDebuggerManager.getInstance(session.project).breakpointManager
         val type: XLineBreakpointType<*>? = XDebuggerUtil.getInstance().findBreakpointType(
-            SolidityLineBreakpointType::class.java
+            SolidityBreakPointType::class.java
         )
 
         if (type != null) {
@@ -171,16 +174,6 @@ class Web3jDebugProcess constructor(session: XDebugSession) : XDebugProcess(sess
 
     fun consolePrint(message: String) {
         session.consoleView.print("${message}\n", ConsoleViewContentType.NORMAL_OUTPUT)
-    }
-
-    fun addBreakpoint(breakpoint: XLineBreakpoint<*>) {
-        breakpoints.add(breakpoint)
-        setBreakpoints()
-    }
-
-    fun removeBreakpoint(breakpoint: XLineBreakpoint<*>) {
-        breakpoints.remove(breakpoint)
-        setBreakpoints()
     }
 
     override fun resume(context: XSuspendContext?) {

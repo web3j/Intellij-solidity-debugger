@@ -44,10 +44,10 @@ dependencies {
 
 intellij {
     pluginName = 'Intellij solidity debugger'
-    version = '2020.3.2'
+    version = '2020.3.4'
     downloadSources = true
     dependencies {
-        compileOnly fileTree(dir: 'libs', include: ['intellij-solidity-2.3.6-SNAPSHOT.jar'])
+        compileOnly fileTree(dir: 'libs', include: ['intellij-solidity-2.3.7-SNAPSHOT.jar'])
     }
     plugins = [
             "java", //Required for com.intellij.execution.CommonJavaRunConfigurationParameters
