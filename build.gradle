@@ -1,16 +1,16 @@
 plugins {
     id 'java'
-    id "org.jetbrains.intellij" version "1.1.6"
-    id 'org.jetbrains.kotlin.jvm' version '1.4.30'
+    id "org.jetbrains.intellij" version "1.4.0"
+    id 'org.jetbrains.kotlin.jvm' version '1.6.0-M1'
 }
 
 
 repositories {
-    jcenter()
     mavenCentral()
-    maven {
-        url = uri("https://hyperledger.jfrog.io/hyperledger/besu-maven")
-    }
+    maven { url "https://hyperledger.jfrog.io/hyperledger/besu-maven" }
+    maven { url "https://artifacts.consensys.net/public/maven/maven/" }
+    maven { url "https://splunk.jfrog.io/splunk/ext-releases-local" }
+    maven { url "https://dl.cloudsmith.io/public/consensys/quorum-mainnet-launcher/maven/"}
 }
 
 
@@ -20,8 +20,8 @@ dependencies {
     implementation 'com.beust:klaxon:5.5'
     implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.5.21'
     implementation 'org.jetbrains.kotlin:kotlin-reflect:1.5.21'
-    implementation "org.web3j:core:4.8.4"
-    implementation "org.web3j:web3j-evm:4.8.5"
+    implementation "org.web3j:core:4.8.9"
+    implementation "org.web3j:web3j-evm:4.8.9"
 
     implementation "org.hyperledger.besu:plugin-api:$besuPluginVersion"
     implementation "org.hyperledger.besu.internal:api:$besuInternalVersion"
@@ -39,15 +39,6 @@ dependencies {
     testImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitEngineVersion"
 }
-
-configurations {
-    all {
-        //exclude group:"org.slf4j", module:"slf4j-api"
-        //exclude group:"org.apache.logging.log4j", module:"slf4j-to-log4j12"
-        //exclude group:"org.apache.logging.log4j", module:"log4j-api"
-    }
-}
-
 
 // See https://github.com/JetBrains/gradle-intellij-plugin/
 

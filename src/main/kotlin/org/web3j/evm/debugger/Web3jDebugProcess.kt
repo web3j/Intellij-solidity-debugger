@@ -14,12 +14,6 @@ package org.web3j.evm.debugger
 
 import com.intellij.execution.ui.ConsoleViewContentType
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.editor.markup.TextAttributes
-import com.intellij.openapi.fileEditor.FileEditor
-import com.intellij.openapi.fileEditor.FileEditorManager
-import com.intellij.openapi.project.Project
-import com.intellij.psi.search.FilenameIndex
-import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.util.io.exists
 import com.intellij.xdebugger.XDebugProcess
 import com.intellij.xdebugger.XDebugSession
@@ -43,7 +37,6 @@ import org.web3j.protocol.core.RemoteCall
 import org.web3j.tx.gas.ContractGasProvider
 import org.web3j.tx.gas.DefaultGasProvider
 import java.io.File
-import java.math.BigInteger
 import java.net.URLClassLoader
 import java.nio.file.Paths
 import kotlin.reflect.jvm.kotlinFunction
