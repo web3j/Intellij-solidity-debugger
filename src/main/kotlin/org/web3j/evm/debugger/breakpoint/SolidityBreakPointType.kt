@@ -7,10 +7,8 @@ import com.intellij.psi.PsiElement
 import com.intellij.util.Processor
 import com.intellij.xdebugger.XDebuggerUtil
 import com.intellij.xdebugger.breakpoints.XLineBreakpointType
-import lombok.extern.slf4j.Slf4j
 import me.serce.solidity.lang.SolidityFileType
 
-@Slf4j
 class SolidityBreakPointType : XLineBreakpointType<SolidityBreakpointProperties>(ID, NAME) {
 
     companion object {

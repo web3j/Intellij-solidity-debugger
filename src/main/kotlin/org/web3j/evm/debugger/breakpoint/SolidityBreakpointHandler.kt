@@ -6,8 +6,7 @@ import com.intellij.xdebugger.breakpoints.XLineBreakpoint
 
 
 class SolidityBreakpointHandler : XBreakpointHandler<XLineBreakpoint<SolidityBreakpointProperties>>(SolidityBreakPointType::class.java) {
-    private val breakpoints = mutableListOf<XLineBreakpoint<*>>()
-
+    val breakpoints = mutableListOf<XLineBreakpoint<*>>()
 
     override fun registerBreakpoint(breakpoint: XLineBreakpoint<SolidityBreakpointProperties>) {
         val breakpointPosition = breakpoint.sourcePosition ?: return
