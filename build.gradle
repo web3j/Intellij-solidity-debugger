@@ -11,6 +11,7 @@ repositories {
     maven { url "https://artifacts.consensys.net/public/maven/maven/" }
     maven { url "https://splunk.jfrog.io/splunk/ext-releases-local" }
     maven { url "https://dl.cloudsmith.io/public/consensys/quorum-mainnet-launcher/maven/"}
+    mavenLocal()
 }
 
 
@@ -20,20 +21,21 @@ dependencies {
     implementation 'com.beust:klaxon:5.5'
     implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.5.21'
     implementation 'org.jetbrains.kotlin:kotlin-reflect:1.5.21'
-    implementation "org.web3j:core:4.8.9"
-    implementation "org.web3j:web3j-evm:4.8.9"
+    implementation "org.web3j:web3j-evm:4.9.1_Local_web3j_4.9.1"
 
-    implementation "org.hyperledger.besu:plugin-api:$besuPluginVersion"
-    implementation "org.hyperledger.besu.internal:api:$besuInternalVersion"
-    implementation "org.hyperledger.besu.internal:config:$besuInternalVersion"
-    implementation "org.hyperledger.besu.internal:core:$besuInternalVersion"
-    implementation "org.hyperledger.besu.internal:crypto:$besuInternalVersion"
-    implementation "org.hyperledger.besu.internal:rlp:$besuInternalVersion"
-    implementation "org.hyperledger.besu.internal:kvstore:$besuInternalVersion"
-    implementation "org.hyperledger.besu.internal:metrics-core:$besuInternalVersion"
-    implementation "org.hyperledger.besu.internal:trie:$besuInternalVersion"
-    implementation "org.hyperledger.besu.internal:util:$besuInternalVersion"
-    implementation "org.hyperledger.besu:bls12-381:$besuCryptoDepVersion"
+    def withoutAbi = { exclude group: 'org.web3j', module: 'abi' }
+
+    implementation "org.hyperledger.besu:plugin-api:$besuPluginVersion", withoutAbi
+    implementation "org.hyperledger.besu.internal:api:$besuInternalVersion", withoutAbi
+    implementation "org.hyperledger.besu.internal:config:$besuInternalVersion", withoutAbi
+    implementation "org.hyperledger.besu.internal:core:$besuInternalVersion", withoutAbi
+    implementation "org.hyperledger.besu.internal:crypto:$besuInternalVersion", withoutAbi
+    implementation "org.hyperledger.besu.internal:rlp:$besuInternalVersion", withoutAbi
+    implementation "org.hyperledger.besu.internal:kvstore:$besuInternalVersion", withoutAbi
+    implementation "org.hyperledger.besu.internal:metrics-core:$besuInternalVersion", withoutAbi
+    implementation "org.hyperledger.besu.internal:trie:$besuInternalVersion", withoutAbi
+    implementation "org.hyperledger.besu.internal:util:$besuInternalVersion", withoutAbi
+    implementation "org.hyperledger.besu:bls12-381:$besuCryptoDepVersion", withoutAbi
 
     testImplementation "org.mockito:mockito-core:$mockitoVersion"
     testImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
