@@ -1,9 +1,19 @@
 package org.web3j.evm.debugger.run
 
 import com.intellij.diagnostic.logging.LogConfigurationPanel
-import com.intellij.execution.*
+import com.intellij.execution.CommonJavaRunConfigurationParameters
+import com.intellij.execution.ExecutionBundle
+import com.intellij.execution.ExecutionException
+import com.intellij.execution.Executor
+import com.intellij.execution.ExternalizablePath
+import com.intellij.execution.JavaRunConfigurationExtensionManager
 import com.intellij.execution.configuration.EnvironmentVariablesComponent
-import com.intellij.execution.configurations.*
+import com.intellij.execution.configurations.ConfigurationFactory
+import com.intellij.execution.configurations.ModuleBasedConfiguration
+import com.intellij.execution.configurations.RunConfiguration
+import com.intellij.execution.configurations.RunConfigurationWithSuppressedDefaultDebugAction
+import com.intellij.execution.configurations.RunProfileState
+import com.intellij.execution.configurations.RuntimeConfigurationError
 import com.intellij.execution.filters.TextConsoleBuilderFactory
 import com.intellij.execution.runners.ExecutionEnvironment
 import com.intellij.execution.util.JavaParametersUtil
@@ -11,14 +21,11 @@ import com.intellij.execution.util.ProgramParametersUtil
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.options.SettingsEditor
 import com.intellij.openapi.options.SettingsEditorGroup
-import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.psi.PsiManager
 import com.intellij.util.xmlb.XmlSerializer
 import me.serce.solidity.ide.run.SearchUtils
 import me.serce.solidity.lang.psi.SolContractDefinition
 import org.jdom.Element
 import org.web3j.abi.datatypes.Uint
-import java.util.*
 
 abstract class EvmRunConfigurationBase(
     factory: ConfigurationFactory,
