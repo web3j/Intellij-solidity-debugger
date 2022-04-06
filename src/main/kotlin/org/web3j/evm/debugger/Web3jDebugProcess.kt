@@ -14,7 +14,6 @@ package org.web3j.evm.debugger
 
 import com.intellij.execution.ui.ConsoleViewContentType
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.util.io.exists
 import com.intellij.xdebugger.XDebugProcess
 import com.intellij.xdebugger.XDebugSession
 import com.intellij.xdebugger.XDebuggerManager
@@ -25,27 +24,26 @@ import com.intellij.xdebugger.breakpoints.XLineBreakpoint
 import com.intellij.xdebugger.breakpoints.XLineBreakpointType
 import com.intellij.xdebugger.evaluation.XDebuggerEditorsProvider
 import com.intellij.xdebugger.frame.XSuspendContext
+import java.io.File
+import java.net.URLClassLoader
+import kotlin.reflect.jvm.kotlinFunction
 import org.hyperledger.besu.ethereum.vm.OperationTracer
-import org.web3j.abi.datatypes.Address
 import org.web3j.crypto.Credentials
-import org.web3j.crypto.WalletUtils
-import org.web3j.evm.Configuration
 import org.web3j.evm.EmbeddedWeb3jService
 import org.web3j.evm.debugger.run.EvmRunConfiguration
+import org.web3j.evm.debugger.utils.Web3jWalletUtils
 import org.web3j.protocol.Web3j
 import org.web3j.protocol.core.RemoteCall
 import org.web3j.tx.gas.ContractGasProvider
 import org.web3j.tx.gas.DefaultGasProvider
-import java.io.File
-import java.net.URLClassLoader
-import java.nio.file.Paths
-import kotlin.reflect.jvm.kotlinFunction
 
 
 class Web3jDebugProcess constructor(session: XDebugSession) : XDebugProcess(session) {
 
     private val breakpointHandler = SolidityLineBreakpointHandler(this)
     private val breakpoints = mutableListOf<XLineBreakpoint<*>>()
+
+
     private val debuggerEditorsProvider = DebuggerEditorsProvider()
     private var operationTracer: SolidityDebugTracer = SolidityDebugTracer(this)
     private lateinit var web3j: Web3j
@@ -79,7 +77,7 @@ class Web3jDebugProcess constructor(session: XDebugSession) : XDebugProcess(sess
         val workingDir = getRunConfig().workingDirectory as String
 
         val (config, credentials) =
-            createWeb3jConfig("8956cf546a960f49ce61ec2bcc892565355a67cb9cd9830bc5a674fb5e2d8e1e")
+            Web3jWalletUtils.createCredentialsConfigFromPK("8956cf546a960f49ce61ec2bcc892565355a67cb9cd9830bc5a674fb5e2d8e1e")
 
         ApplicationManager.getApplication().executeOnPooledThread {
             operationTracer = SolidityDebugTracer(this)
@@ -115,22 +113,6 @@ class Web3jDebugProcess constructor(session: XDebugSession) : XDebugProcess(sess
 
     fun getRunConfig(): EvmRunConfiguration {
         return session.runProfile as EvmRunConfiguration
-    }
-
-    private fun createWeb3jConfig(privateKey: String?): Pair<Configuration, Credentials> {
-        val credentials = if (privateKey.isNullOrEmpty()) {
-            val workingDir = getRunConfig().workingDirectory + "/"
-            val walletFile = "$workingDir${getRunConfig().name}_wallet.json"
-            if (!Paths.get(walletFile).exists()) {
-                val newWallet = workingDir + WalletUtils
-                    .generateNewWalletFile("Password123", File(workingDir))
-                File(newWallet).renameTo(File(walletFile))
-            }
-            WalletUtils.loadCredentials("Password123", walletFile)
-        } else {
-            Credentials.create(privateKey)
-        }
-        return Pair(Configuration(Address(credentials.address), 10), credentials)
     }
 
     override fun stop() {
@@ -172,6 +154,7 @@ class Web3jDebugProcess constructor(session: XDebugSession) : XDebugProcess(sess
     fun consolePrint(message: String) {
         session.consoleView.print("${message}\n", ConsoleViewContentType.NORMAL_OUTPUT)
     }
+
 
     fun addBreakpoint(breakpoint: XLineBreakpoint<*>) {
         breakpoints.add(breakpoint)

@@ -16,26 +16,18 @@ repositories {
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['log4j-api-3.0.0-SNAPSHOT.jar'])
-    def withoutCore = { exclude group: 'org.web3j', module: 'core' }
 
-    implementation 'com.beust:klaxon:5.5'
+    implementation 'com.beust:klaxon:5.6'
     implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.5.21'
     implementation 'org.jetbrains.kotlin:kotlin-reflect:1.5.21'
-    implementation "org.web3j:web3j-evm:4.8.9"
+    implementation "org.web3j:web3j-evm:4.9.2"
 
     def withoutAbi = { exclude group: 'org.web3j', module: 'abi' }
 
-    implementation "org.hyperledger.besu:plugin-api:$besuPluginVersion", withoutAbi
-    implementation "org.hyperledger.besu.internal:api:$besuInternalVersion", withoutAbi
-    implementation "org.hyperledger.besu.internal:config:$besuInternalVersion", withoutAbi
+
     implementation "org.hyperledger.besu.internal:core:$besuInternalVersion", withoutAbi
     implementation "org.hyperledger.besu.internal:crypto:$besuInternalVersion", withoutAbi
-    implementation "org.hyperledger.besu.internal:rlp:$besuInternalVersion", withoutAbi
-    implementation "org.hyperledger.besu.internal:kvstore:$besuInternalVersion", withoutAbi
-    implementation "org.hyperledger.besu.internal:metrics-core:$besuInternalVersion", withoutAbi
-    implementation "org.hyperledger.besu.internal:trie:$besuInternalVersion", withoutAbi
-    implementation "org.hyperledger.besu.internal:util:$besuInternalVersion", withoutAbi
-    implementation "org.hyperledger.besu:bls12-381:$besuCryptoDepVersion", withoutAbi
+
 
     testImplementation "org.mockito:mockito-core:$mockitoVersion"
     testImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
@@ -49,7 +41,7 @@ intellij {
     version = '2020.3.2'
     downloadSources = true
     dependencies {
-        compileOnly fileTree(dir: 'libs', include: ['intellij-solidity-2.3.6-SNAPSHOT.jar'])
+        compileOnly fileTree(dir: 'libs', include: ['intellij-solidity-2.3.7-SNAPSHOT.jar'])
     }
     plugins = [
             "java", //Required for com.intellij.execution.CommonJavaRunConfigurationParameters
@@ -57,7 +49,7 @@ intellij {
     ]
 }
 compileKotlin {
-    kotlinOptions.jvmTarget = "11"
+    kotlinOptions.jvmTarget = "1.8"
 }
 
 
