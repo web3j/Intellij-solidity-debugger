@@ -24,7 +24,7 @@ dependencies {
     implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.5.21'
     implementation 'org.jetbrains.kotlin:kotlin-reflect:1.5.21'
 //    implementation "org.web3j:core:4.9.0"
-    implementation "org.web3j:web3j-evm:4.9.2-LOCAL"
+    implementation "org.web3j:web3j-evm:4.9.2-LOCAL2"
 
     def withoutAbi = { exclude group: 'org.web3j', module: 'abi' }
 
