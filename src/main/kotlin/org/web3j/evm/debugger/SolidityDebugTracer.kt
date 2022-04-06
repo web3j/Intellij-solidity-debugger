@@ -25,6 +25,10 @@ import org.hyperledger.besu.ethereum.vm.MessageFrame
 import org.hyperledger.besu.ethereum.vm.OperationTracer
 import org.web3j.evm.ExceptionalHaltException
 import org.web3j.evm.debugger.mapping.utils.resolveContext
+import org.web3j.evm.debugger.ui.SolidityDebuggerEditor
+import org.web3j.evm.debugger.frame.SoliditySourcePosition
+import org.web3j.evm.debugger.frame.SolidityNamedValue
+import org.web3j.evm.debugger.frame.SolidityStackFrame
 import org.web3j.evm.entity.ContractMapping
 import org.web3j.evm.entity.source.SourceFile
 import org.web3j.evm.entity.source.SourceMapElement
@@ -119,7 +123,7 @@ class SolidityDebugTracer(private val debugProcess: Web3jDebugProcess) : Operati
         captureMemory(frame).forEach {
             it.let {
                 val value = it?.toHexString() + " " + it?.toArray()?.let { it1 -> String(it1) }
-                 stackFrame.addValue(SolidityValue("memory", "string", value))
+                 stackFrame.addValue(SolidityNamedValue("memory", "string", value))
             }
         }
         stackFrames.add(stackFrame)

@@ -10,14 +10,13 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package org.web3j.evm.debugger
+package org.web3j.evm.debugger.frame
 
-import com.intellij.openapi.editor.markup.GutterIconRenderer
 import com.intellij.xdebugger.frame.XExecutionStack
 import com.intellij.xdebugger.frame.XStackFrame
 import com.intellij.xdebugger.impl.frame.XStackFrameContainerEx
 
-class ExecutionStack(private val stackFrameList: List<SolidityStackFrame>)
+class SolidityExecutionStack(private val stackFrameList: List<SolidityStackFrame>)
     :XExecutionStack("EVM Stack") {
 
     private var topFrame: XStackFrame? = null

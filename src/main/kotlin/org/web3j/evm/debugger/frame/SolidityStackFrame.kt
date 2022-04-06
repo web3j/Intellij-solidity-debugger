@@ -1,4 +1,4 @@
-package org.web3j.evm.debugger
+package org.web3j.evm.debugger.frame
 
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
@@ -11,13 +11,6 @@ import me.serce.solidity.lang.psi.SolElement
 import me.serce.solidity.lang.psi.elementType
 import me.serce.solidity.lang.psi.impl.SolConstructorDefinitionImpl
 import me.serce.solidity.lang.psi.impl.SolContractDefinitionImpl
-
-class SolidityValue(name: String, private val type: String, private val value: String) : XNamedValue(name) {
-
-    override fun computePresentation(node: XValueNode, place: XValuePlace) {
-        node.setPresentation(null, type, value, false)
-    }
-}
 
 class SolidityStackFrame(
     private val project: Project,
@@ -32,7 +25,7 @@ class SolidityStackFrame(
         return SoliditySourcePosition(srcFile, line, offset, project)
     }
 
-    fun addValue(node: SolidityValue) {
+    fun addValue(node: SolidityNamedValue) {
         values.add(node.name, node)
     }
 
@@ -64,6 +57,5 @@ class SolidityStackFrame(
             }
         }
     }
-
 
 }

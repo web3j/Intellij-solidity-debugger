@@ -1,13 +1,12 @@
 import com.intellij.openapi.fileTypes.PlainTextFileType
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
-import me.serce.solidity.lang.SolidityFileType
 import org.junit.Assert.assertFalse
 import org.junit.Test
 import org.mockito.Mock
 import org.mockito.Mockito
 import org.mockito.Mockito.`when`
-import org.web3j.evm.debugger.SolidityLineBreakpointType
+import org.web3j.evm.debugger.breakpoint.SolidityBreakpointType
 
 class SolLineBreakpointTest {
 
@@ -27,7 +26,7 @@ class SolLineBreakpointTest {
     @Test
     internal fun `test break point on different file`() {
         `when`(virtualFile.fileType).thenReturn(PlainTextFileType.INSTANCE)
-        val breakpointType = SolidityLineBreakpointType()
+        val breakpointType = SolidityBreakpointType()
         assertFalse(breakpointType.canPutAt(virtualFile, 20, project))
     }
 }
