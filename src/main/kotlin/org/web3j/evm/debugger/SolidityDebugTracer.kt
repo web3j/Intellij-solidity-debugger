@@ -29,6 +29,7 @@ import org.web3j.evm.debugger.ui.SolidityDebuggerEditor
 import org.web3j.evm.debugger.frame.SoliditySourcePosition
 import org.web3j.evm.debugger.frame.SolidityNamedValue
 import org.web3j.evm.debugger.frame.SolidityStackFrame
+import org.web3j.evm.debugger.model.DebugCommand
 import org.web3j.evm.entity.ContractMapping
 import org.web3j.evm.entity.source.SourceFile
 import org.web3j.evm.entity.source.SourceMapElement
@@ -39,7 +40,7 @@ class SolidityDebugTracer(private val debugProcess: Web3jDebugProcess) : Operati
     private var breakPoints = mutableMapOf<String, MutableSet<Int>>()
     private var runTillNextLine = false
     private var lastSelectedLine = 0
-    private val commandQueue: BlockingQueue<String> = LinkedBlockingDeque()
+    private val commandQueue: BlockingQueue<DebugCommand> = LinkedBlockingDeque()
     private val stackFrames = mutableListOf<SolidityStackFrame>()
     private val UINT256_32: UInt256 = UInt256.valueOf(32)
 
@@ -67,23 +68,23 @@ class SolidityDebugTracer(private val debugProcess: Web3jDebugProcess) : Operati
 
         sb.append("Line $firstSelectedLine: Offset $firstSelectedOffset")
         when (commandQueue.take()) {
-            "execute" -> {
+            DebugCommand.EXECUTE -> {
                 if (runTillNextLine && firstSelectedLine == lastSelectedLine) {
                     debugProcess.suspend(firstSelectedLine)
 
                 } else if (runTillNextLine) {
                     runTillNextLine = false
-                    commandQueue.put("suspend")
+                    commandQueue.put(DebugCommand.SUSPEND)
                     if (filePath != null) {
                         updateStackFrame("" + filePath, firstSelectedLine, firstSelectedOffset, frame)
                     }
                     return step(frame)
                 } else if (breakPoints.values.any { it.contains(firstSelectedLine) }) {
-                    commandQueue.put("suspend")
+                    commandQueue.put(DebugCommand.SUSPEND)
                     return step(frame)
                 }
             }
-            "suspend" -> {
+            DebugCommand.SUSPEND -> {
                 debugProcess.suspend(firstSelectedLine)
                 debugProcess
                 lastSelectedLine = firstSelectedLine
@@ -91,7 +92,7 @@ class SolidityDebugTracer(private val debugProcess: Web3jDebugProcess) : Operati
 
                 return step(frame)
             }
-            "stepOver", "stepInto", "stepOut" -> {
+            DebugCommand.STEP_OVER, DebugCommand.STEP_INTO, DebugCommand.STEP_OUT -> {
                 debugProcess.consolePrint("Stepping..")
             }
         }
@@ -99,7 +100,7 @@ class SolidityDebugTracer(private val debugProcess: Web3jDebugProcess) : Operati
         return ""
     }
 
-    fun sendCommand(command: String) {
+    fun sendCommand(command: DebugCommand) {
         commandQueue.put(command)
     }
 
@@ -147,7 +148,7 @@ class SolidityDebugTracer(private val debugProcess: Web3jDebugProcess) : Operati
     }
 
     override fun traceExecution(messageFrame: MessageFrame, executeOperation: OperationTracer.ExecuteOperation?) {
-        commandQueue.put("execute")
+        commandQueue.put(DebugCommand.EXECUTE)
         step(messageFrame)
         executeOperation?.execute()
         if (messageFrame.state != MessageFrame.State.CODE_EXECUTING) {
