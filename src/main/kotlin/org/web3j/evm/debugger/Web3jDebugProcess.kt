@@ -34,6 +34,7 @@ import org.web3j.evm.debugger.breakpoint.SolidityBreakpointHandler
 import org.web3j.evm.debugger.breakpoint.SolidityBreakpointType
 import org.web3j.evm.debugger.frame.SolidityExecutionStack
 import org.web3j.evm.debugger.frame.SoliditySuspendContext
+import org.web3j.evm.debugger.model.DebugCommand
 import org.web3j.evm.debugger.run.EvmRunConfiguration
 import org.web3j.evm.debugger.utils.Web3jWalletUtils
 import org.web3j.protocol.Web3j
@@ -170,18 +171,18 @@ class Web3jDebugProcess constructor(session: XDebugSession) : XDebugProcess(sess
     }
 
     override fun startStepInto(context: XSuspendContext?) {
-        operationTracer.sendCommand("stepInto")
+        operationTracer.sendCommand(DebugCommand.STEP_INTO)
         println("step into..")
     }
 
     override fun startStepOut(context: XSuspendContext?) {
         println("step out..")
-        operationTracer.sendCommand("stepOut")
+        operationTracer.sendCommand(DebugCommand.STEP_OUT)
     }
 
     override fun startStepOver(context: XSuspendContext?) {
         println("step over..")
-        operationTracer.sendCommand("stepOver")
+        operationTracer.sendCommand(DebugCommand.STEP_OVER)
     }
 
 }
