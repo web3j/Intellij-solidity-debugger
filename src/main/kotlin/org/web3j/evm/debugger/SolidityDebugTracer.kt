@@ -74,7 +74,7 @@ class SolidityDebugTracer(private val debugProcess: Web3jDebugProcess) : Operati
         when (commandQueue.take()) {
             DebugCommand.EXECUTE -> {
                 val opCode = frame.currentOperation.name
-                var skipFrame = isSkipFrame(frame)
+                val skipFrame = isSkipFrame(frame)
 
                 if(skipFrame){
                     return ""
@@ -96,6 +96,10 @@ class SolidityDebugTracer(private val debugProcess: Web3jDebugProcess) : Operati
             }
 
             DebugCommand.SUSPEND -> {
+                if (filePath != null) {
+                    updateStackFrame(filePath, firstSelectedLine, firstSelectedOffset, frame)
+                }
+
                 debugProcess.suspend(firstSelectedLine)
                 lastSelectedLine = firstSelectedLine
                 runTillNextLine = true
@@ -119,6 +123,9 @@ class SolidityDebugTracer(private val debugProcess: Web3jDebugProcess) : Operati
             DebugCommand.STEP_OUT -> {
                 debugProcess.consolePrint("Stepping out..")
             }
+
+
+
         }
 
         debugProcess.consolePrint(sb.toString())
