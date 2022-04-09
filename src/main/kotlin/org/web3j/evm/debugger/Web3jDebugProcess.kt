@@ -44,13 +44,11 @@ import org.web3j.tx.gas.DefaultGasProvider
 
 
 class Web3jDebugProcess constructor(session: XDebugSession) : XDebugProcess(session) {
-    private val breakpointHandler = SolidityBreakpointHandler()
-    private val breakpoints = mutableListOf<XLineBreakpoint<*>>()
-
-
-    private val debuggerEditorsProvider = DebuggerEditorsProvider()
-    private var operationTracer: SolidityDebugTracer = SolidityDebugTracer(this)
     private lateinit var web3j: Web3j
+    private val breakpointHandler = SolidityBreakpointHandler()
+    private val debuggerEditorsProvider = DebuggerEditorsProvider()
+    private lateinit var operationTracer: SolidityDebugTracer
+
 
     override fun getEditorsProvider(): XDebuggerEditorsProvider {
         return debuggerEditorsProvider
@@ -65,17 +63,6 @@ class Web3jDebugProcess constructor(session: XDebugSession) : XDebugProcess(sess
         startWeb3jEmbeddedService()
     }
 
-    private fun setBreakpoints() {
-        val breakpointsMap = mutableMapOf<String, MutableSet<Int>>()
-
-        breakpointHandler.breakpoints.forEach {
-            val src = "src/main/solidity/" + it.shortFilePath;
-            breakpointsMap.getOrPut(src) { mutableSetOf() }.add(it.line+1) // first XLineBreakpoint is 0
-        }
-
-        operationTracer.setBreakpoints(breakpointsMap)
-    }
-
     private fun startWeb3jEmbeddedService() {
         // HERE
         val workingDir = getRunConfig().workingDirectory as String
@@ -85,9 +72,10 @@ class Web3jDebugProcess constructor(session: XDebugSession) : XDebugProcess(sess
 
         ApplicationManager.getApplication().executeOnPooledThread {
             operationTracer = SolidityDebugTracer(this)
-            setBreakpoints()
+            operationTracer.setBreakpoints(getBreakpoints())
 
             val web3jService = EmbeddedWeb3jService(config, operationTracer as OperationTracer)
+
             web3j = Web3j.build(web3jService)
 
             consolePrint("EmbeddedWeb3jService started ${web3j}")
@@ -137,6 +125,16 @@ class Web3jDebugProcess constructor(session: XDebugSession) : XDebugProcess(sess
             }
         }
     }
+
+    private fun getBreakpoints() : MutableMap<String, MutableSet<Int>> {
+        val breakpointsMap = mutableMapOf<String, MutableSet<Int>>()
+        breakpointHandler.breakpoints.forEach {
+            val src = "src/main/solidity/" + it.shortFilePath;
+            breakpointsMap.getOrPut(src) { mutableSetOf() }.add(it.line+1) // first XLineBreakpoint is 0
+        }
+        return breakpointsMap;
+    }
+
 
     private fun findBreakpoint(filePath: String, lineNumber: Int): XLineBreakpoint<out XBreakpointProperties<Any>>? {
         val manager = XDebuggerManager.getInstance(session.project).breakpointManager

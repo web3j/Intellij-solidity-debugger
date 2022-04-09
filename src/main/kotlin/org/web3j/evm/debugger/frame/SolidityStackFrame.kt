@@ -47,13 +47,17 @@ class SolidityStackFrame(
     private fun resolveContext(psiElementAtPosition: PsiElement): SolElement? {
         return when (val parent = PsiTreeUtil.getParentOfType(psiElementAtPosition, SolElement::class.java)) {
             is SolConstructorDefinitionImpl -> {
-                parent
+                return parent
             }
             is SolContractDefinitionImpl -> {
-                parent
+                return parent
             }
             else -> {
-                resolveContext(parent!!.parent)
+                if (parent != null && parent.parent != null){
+                    return resolveContext(parent.parent) ?: return parent
+                } else {
+                    return null
+                }
             }
         }
     }

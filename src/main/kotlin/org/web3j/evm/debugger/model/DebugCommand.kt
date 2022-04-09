@@ -7,5 +7,7 @@ enum class DebugCommand(val command: String) {
     STEP_OUT("stepOut"),
     STEP_OVER("stepOver"),
 
-    SUSPEND("suspend")
+    SUSPEND("suspend"),
+
+    JUMP("jump")
 }

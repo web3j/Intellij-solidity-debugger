@@ -30,6 +30,8 @@ import org.web3j.evm.debugger.frame.SoliditySourcePosition
 import org.web3j.evm.debugger.frame.SolidityNamedValue
 import org.web3j.evm.debugger.frame.SolidityStackFrame
 import org.web3j.evm.debugger.model.DebugCommand
+import org.web3j.evm.debugger.model.JumpOpCodeProcessManager
+import org.web3j.evm.debugger.model.OpCode
 import org.web3j.evm.entity.ContractMapping
 import org.web3j.evm.entity.source.SourceFile
 import org.web3j.evm.entity.source.SourceMapElement
@@ -38,18 +40,19 @@ import org.web3j.evm.utils.SourceMappingUtils
 
 class SolidityDebugTracer(private val debugProcess: Web3jDebugProcess) : OperationTracer {
     private var breakPoints = mutableMapOf<String, MutableSet<Int>>()
-    private var runTillNextLine = false
     private var lastSelectedLine = 0
+    private var runTillNextLine = false
+    private var jumpOpCodeManager = JumpOpCodeProcessManager();
+
+
     private val commandQueue: BlockingQueue<DebugCommand> = LinkedBlockingDeque()
     private val stackFrames = mutableListOf<SolidityStackFrame>()
     private val UINT256_32: UInt256 = UInt256.valueOf(32)
 
-    fun setBreakpoints(breakpoints: MutableMap<String, MutableSet<Int>>) {
-        this.breakPoints = breakpoints
-    }
-
     @Throws(ExceptionalHaltException::class)
     private fun step(frame: MessageFrame): String {
+        debugProcess.consolePrint("OpCode: " + frame.currentOperation.name)
+
         val (sourceMapElement, sourceFile) = sourceAtMessageFrame(frame)
         val (filePath, contractContent) = sourceFile
         // This takes the body without the pragma So in this case the current execution is at line 3 which is the contract declaration
@@ -67,16 +70,23 @@ class SolidityDebugTracer(private val debugProcess: Web3jDebugProcess) : Operati
             )
 
         sb.append("Line $firstSelectedLine: Offset $firstSelectedOffset")
+
         when (commandQueue.take()) {
             DebugCommand.EXECUTE -> {
-                if (runTillNextLine && firstSelectedLine == lastSelectedLine) {
+                val opCode = frame.currentOperation.name
+                var skipFrame = isSkipFrame(frame)
+
+                if(skipFrame){
+                    return ""
+                } else
+                if (runTillNextLine && firstSelectedLine == lastSelectedLine && !OpCode.isJump(opCode)) {
                     debugProcess.suspend(firstSelectedLine)
 
                 } else if (runTillNextLine) {
                     runTillNextLine = false
                     commandQueue.put(DebugCommand.SUSPEND)
                     if (filePath != null) {
-                        updateStackFrame("" + filePath, firstSelectedLine, firstSelectedOffset, frame)
+                        updateStackFrame(filePath, firstSelectedLine, firstSelectedOffset, frame)
                     }
                     return step(frame)
                 } else if (breakPoints.values.any { it.contains(firstSelectedLine) }) {
@@ -84,20 +94,50 @@ class SolidityDebugTracer(private val debugProcess: Web3jDebugProcess) : Operati
                     return step(frame)
                 }
             }
+
             DebugCommand.SUSPEND -> {
                 debugProcess.suspend(firstSelectedLine)
-                debugProcess
                 lastSelectedLine = firstSelectedLine
                 runTillNextLine = true
 
                 return step(frame)
             }
-            DebugCommand.STEP_OVER, DebugCommand.STEP_INTO, DebugCommand.STEP_OUT -> {
-                debugProcess.consolePrint("Stepping..")
+
+            DebugCommand.STEP_INTO -> {
+                debugProcess.consolePrint("Stepping into..")
+            }
+
+            DebugCommand.STEP_OVER -> {
+                val opCode = frame.currentOperation.name
+                if (OpCode.isJump(opCode)){
+                    jumpOpCodeManager.activate()
+                }
+
+                debugProcess.consolePrint("Stepping over..")
+            }
+
+            DebugCommand.STEP_OUT -> {
+                debugProcess.consolePrint("Stepping out..")
             }
         }
+
         debugProcess.consolePrint(sb.toString())
         return ""
+    }
+
+    private fun isSkipFrame(frame: MessageFrame) : Boolean {
+        if(jumpOpCodeManager.isActive()){
+            val opCode = frame.currentOperation.name
+            if (OpCode.isJumpDest(opCode)){
+                jumpOpCodeManager.incrementDestCounter()
+            }
+        }
+
+        return jumpOpCodeManager.isActive()
+    }
+
+    fun setBreakpoints(breakpoints: MutableMap<String, MutableSet<Int>>) {
+        this.breakPoints = breakpoints
     }
 
     fun sendCommand(command: DebugCommand) {
