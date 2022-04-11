@@ -1,4 +1,4 @@
-package org.web3j.evm.debugger
+package org.web3j.evm.debugger.ui
 
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.fileEditor.FileEditorManager

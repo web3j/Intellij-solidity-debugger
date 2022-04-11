@@ -31,4 +31,6 @@ object Web3jWalletUtils {
         return Pair(Configuration(Address(credentials.address), 10), credentials)
     }
 
+
+
 }

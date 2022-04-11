@@ -25,6 +25,13 @@ import org.hyperledger.besu.ethereum.vm.MessageFrame
 import org.hyperledger.besu.ethereum.vm.OperationTracer
 import org.web3j.evm.ExceptionalHaltException
 import org.web3j.evm.debugger.mapping.utils.resolveContext
+import org.web3j.evm.debugger.ui.SolidityDebuggerEditor
+import org.web3j.evm.debugger.frame.SoliditySourcePosition
+import org.web3j.evm.debugger.frame.SolidityNamedValue
+import org.web3j.evm.debugger.frame.SolidityStackFrame
+import org.web3j.evm.debugger.model.DebugCommand
+import org.web3j.evm.debugger.model.JumpOpCodeProcessManager
+import org.web3j.evm.debugger.model.OpCode
 import org.web3j.evm.entity.ContractMapping
 import org.web3j.evm.entity.source.SourceFile
 import org.web3j.evm.entity.source.SourceMapElement
@@ -33,18 +40,19 @@ import org.web3j.evm.utils.SourceMappingUtils
 
 class SolidityDebugTracer(private val debugProcess: Web3jDebugProcess) : OperationTracer {
     private var breakPoints = mutableMapOf<String, MutableSet<Int>>()
-    private var runTillNextLine = false
     private var lastSelectedLine = 0
-    private val commandQueue: BlockingQueue<String> = LinkedBlockingDeque()
+    private var runTillNextLine = false
+    private var jumpOpCodeManager = JumpOpCodeProcessManager();
+
+
+    private val commandQueue: BlockingQueue<DebugCommand> = LinkedBlockingDeque()
     private val stackFrames = mutableListOf<SolidityStackFrame>()
     private val UINT256_32: UInt256 = UInt256.valueOf(32)
 
-    fun setBreakpoints(breakpoints: MutableMap<String, MutableSet<Int>>) {
-        this.breakPoints = breakpoints
-    }
-
     @Throws(ExceptionalHaltException::class)
     private fun step(frame: MessageFrame): String {
+        debugProcess.consolePrint("OpCode: " + frame.currentOperation.name)
+
         val (sourceMapElement, sourceFile) = sourceAtMessageFrame(frame)
         val (filePath, contractContent) = sourceFile
         // This takes the body without the pragma So in this case the current execution is at line 3 which is the contract declaration
@@ -62,40 +70,84 @@ class SolidityDebugTracer(private val debugProcess: Web3jDebugProcess) : Operati
             )
 
         sb.append("Line $firstSelectedLine: Offset $firstSelectedOffset")
+
         when (commandQueue.take()) {
-            "execute" -> {
-                if (runTillNextLine && firstSelectedLine == lastSelectedLine) {
+            DebugCommand.EXECUTE -> {
+                val opCode = frame.currentOperation.name
+                val skipFrame = isSkipFrame(frame)
+
+                if(skipFrame){
+                    return ""
+                } else
+                if (runTillNextLine && firstSelectedLine == lastSelectedLine && !OpCode.isJump(opCode)) {
                     debugProcess.suspend(firstSelectedLine)
 
                 } else if (runTillNextLine) {
                     runTillNextLine = false
-                    commandQueue.put("suspend")
+                    commandQueue.put(DebugCommand.SUSPEND)
                     if (filePath != null) {
-                        updateStackFrame("" + filePath, firstSelectedLine, firstSelectedOffset, frame)
+                        updateStackFrame(filePath, firstSelectedLine, firstSelectedOffset, frame)
                     }
                     return step(frame)
                 } else if (breakPoints.values.any { it.contains(firstSelectedLine) }) {
-                    commandQueue.put("suspend")
+                    commandQueue.put(DebugCommand.SUSPEND)
                     return step(frame)
                 }
             }
-            "suspend" -> {
+
+            DebugCommand.SUSPEND -> {
+                if (filePath != null) {
+                    updateStackFrame(filePath, firstSelectedLine, firstSelectedOffset, frame)
+                }
+
                 debugProcess.suspend(firstSelectedLine)
-                debugProcess
                 lastSelectedLine = firstSelectedLine
                 runTillNextLine = true
 
                 return step(frame)
             }
-            "stepOver", "stepInto", "stepOut" -> {
-                debugProcess.consolePrint("Stepping..")
+
+            DebugCommand.STEP_INTO -> {
+                debugProcess.consolePrint("Stepping into..")
             }
+
+            DebugCommand.STEP_OVER -> {
+                val opCode = frame.currentOperation.name
+                if (OpCode.isJump(opCode)){
+                    jumpOpCodeManager.activate()
+                }
+
+                debugProcess.consolePrint("Stepping over..")
+            }
+
+            DebugCommand.STEP_OUT -> {
+                debugProcess.consolePrint("Stepping out..")
+            }
+
+
+
         }
+
         debugProcess.consolePrint(sb.toString())
         return ""
     }
 
-    fun sendCommand(command: String) {
+    private fun isSkipFrame(frame: MessageFrame) : Boolean {
+        if(jumpOpCodeManager.isActive()){
+            val opCode = frame.currentOperation.name
+            if (OpCode.isJumpDest(opCode)){
+                jumpOpCodeManager.incrementDestCounter()
+            }
+        }
+
+        return jumpOpCodeManager.isActive()
+    }
+
+    fun setBreakpoints(breakpoints: MutableMap<String, MutableSet<Int>>) {
+        this.breakPoints = breakpoints
+    }
+
+    fun sendCommand(command: DebugCommand) {
         commandQueue.put(command)
     }
 
@@ -119,7 +171,7 @@ class SolidityDebugTracer(private val debugProcess: Web3jDebugProcess) : Operati
         captureMemory(frame).forEach {
             it.let {
                 val value = it?.toHexString() + " " + it?.toArray()?.let { it1 -> String(it1) }
-                 stackFrame.addValue(SolidityValue("memory", "string", value))
+                 stackFrame.addValue(SolidityNamedValue("memory", "string", value))
             }
         }
         stackFrames.add(stackFrame)
@@ -143,7 +195,7 @@ class SolidityDebugTracer(private val debugProcess: Web3jDebugProcess) : Operati
     }
 
     override fun traceExecution(messageFrame: MessageFrame, executeOperation: OperationTracer.ExecuteOperation?) {
-        commandQueue.put("execute")
+        commandQueue.put(DebugCommand.EXECUTE)
         step(messageFrame)
         executeOperation?.execute()
         if (messageFrame.state != MessageFrame.State.CODE_EXECUTING) {
