@@ -114,13 +114,13 @@ class SolidityDebugTracer(private val debugProcess: Web3jDebugProcess) : Operati
             DebugCommand.STEP_OVER -> {
                 val opCode = frame.currentOperation.name
                 if (OpCode.isJump(opCode)){
-                    jumpOpCodeManager.activate()
+                    jumpOpCodeManager.stepOverActivate()
                 }
-
                 debugProcess.consolePrint("Stepping over..")
             }
 
             DebugCommand.STEP_OUT -> {
+                jumpOpCodeManager.stepOutActivate()
                 debugProcess.consolePrint("Stepping out..")
             }
 
