@@ -98,18 +98,14 @@ class Web3jDebugProcess constructor(session: XDebugSession) : XDebugProcess(sess
 
             val instance = deploy.kotlinFunction?.call(web3j, credentials, DefaultGasProvider(), "Hello!")
                     as RemoteCall<*>
+            val contractResult = instance.send()
 
-            consolePrint("Deployed Contract ${instance.send()}")
+            consolePrint("Deployed Contract $contractResult")
         }
     }
 
     fun getRunConfig(): EvmRunConfiguration {
         return session.runProfile as EvmRunConfiguration
-    }
-
-    override fun stop() {
-        println("Stopping debugger.")
-        web3j.shutdown()
     }
 
     fun suspend(lineNumber: Int) {
@@ -157,29 +153,32 @@ class Web3jDebugProcess constructor(session: XDebugSession) : XDebugProcess(sess
         session.consoleView.print("${message}\n", ConsoleViewContentType.NORMAL_OUTPUT)
     }
 
-    override fun resume(context: XSuspendContext?) {
-        println("Resume: $context")
-        if (context != null) {
-            context.activeExecutionStack as SolidityExecutionStack
-        }
+    override fun stop() {
+        println("Stopping debugger.")
+        web3j.shutdown()
     }
 
     override fun startPausing() {
         println("start Pausing..")
     }
 
+    override fun resume(context: XSuspendContext?) {
+        operationTracer.sendCommand(DebugCommand.RESUME)
+    }
+
     override fun startStepInto(context: XSuspendContext?) {
         operationTracer.sendCommand(DebugCommand.STEP_INTO)
-        println("step into..")
+    }
+
+    override fun startForceStepInto(context: XSuspendContext?) {
+        operationTracer.sendCommand(DebugCommand.FORCE_STEP_INTO)
     }
 
     override fun startStepOut(context: XSuspendContext?) {
-        println("step out..")
         operationTracer.sendCommand(DebugCommand.STEP_OUT)
     }
 
     override fun startStepOver(context: XSuspendContext?) {
-        println("step over..")
         operationTracer.sendCommand(DebugCommand.STEP_OVER)
     }
 
