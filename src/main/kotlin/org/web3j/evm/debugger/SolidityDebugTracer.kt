@@ -29,9 +29,11 @@ import org.web3j.evm.debugger.ui.SolidityDebuggerEditor
 import org.web3j.evm.debugger.frame.SoliditySourcePosition
 import org.web3j.evm.debugger.frame.SolidityNamedValue
 import org.web3j.evm.debugger.frame.SolidityStackFrame
+import org.web3j.evm.debugger.model.BreakPointTraceManager
 import org.web3j.evm.debugger.model.DebugCommand
 import org.web3j.evm.debugger.model.JumpOpCodeProcessManager
 import org.web3j.evm.debugger.model.OpCode
+import org.web3j.evm.debugger.utils.StringUtils
 import org.web3j.evm.entity.ContractMapping
 import org.web3j.evm.entity.source.SourceFile
 import org.web3j.evm.entity.source.SourceMapElement
@@ -39,10 +41,10 @@ import org.web3j.evm.utils.SourceMappingUtils
 
 
 class SolidityDebugTracer(private val debugProcess: Web3jDebugProcess) : OperationTracer {
-    private var breakPoints = mutableMapOf<String, MutableSet<Int>>()
     private var lastSelectedLine = 0
     private var runTillNextLine = false
-    private var jumpOpCodeManager = JumpOpCodeProcessManager();
+    private var jumpOpCodeManager = JumpOpCodeProcessManager()
+    private val breakPointTraceManager = BreakPointTraceManager()
 
 
     private val commandQueue: BlockingQueue<DebugCommand> = LinkedBlockingDeque()
@@ -54,7 +56,10 @@ class SolidityDebugTracer(private val debugProcess: Web3jDebugProcess) : Operati
         debugProcess.consolePrint("OpCode: " + frame.currentOperation.name)
 
         val (sourceMapElement, sourceFile) = sourceAtMessageFrame(frame)
-        val (filePath, contractContent) = sourceFile
+        val filePath = sourceFile.filePath ?: ""
+        val contractContent = sourceFile.sourceContent
+
+
         // This takes the body without the pragma So in this case the current execution is at line 3 which is the contract declaration
         val firstSelectedLine =
             contractContent.entries.filter { it.value.selected }.map { it.key }.min() ?: 0
@@ -85,11 +90,10 @@ class SolidityDebugTracer(private val debugProcess: Web3jDebugProcess) : Operati
                 } else if (runTillNextLine) {
                     runTillNextLine = false
                     commandQueue.put(DebugCommand.SUSPEND)
-                    if (filePath != null) {
-                        updateStackFrame(filePath, firstSelectedLine, firstSelectedOffset, frame)
-                    }
+
+                    updateStackFrame(filePath, firstSelectedLine, firstSelectedOffset, frame)
                     return step(frame)
-                } else if (breakPoints.values.any { it.contains(firstSelectedLine) }) {
+                } else if (breakPointTraceManager.stoppableBreakPoint(filePath, firstSelectedLine)) {
                     commandQueue.put(DebugCommand.SUSPEND)
                     return step(frame)
                 }
@@ -104,10 +108,11 @@ class SolidityDebugTracer(private val debugProcess: Web3jDebugProcess) : Operati
                 lastSelectedLine = firstSelectedLine
                 runTillNextLine = true
 
+
                 return step(frame)
             }
 
-            DebugCommand.STEP_INTO -> {
+            DebugCommand.STEP_INTO, DebugCommand.FORCE_STEP_INTO -> {
                 debugProcess.consolePrint("Stepping into..")
             }
 
@@ -124,6 +129,13 @@ class SolidityDebugTracer(private val debugProcess: Web3jDebugProcess) : Operati
                 debugProcess.consolePrint("Stepping out..")
             }
 
+            DebugCommand.RESUME -> {
+                jumpOpCodeManager.deactivate()
+                runTillNextLine = false
+                breakPointTraceManager.skipBreakPoint(filePath, firstSelectedLine)
+
+                debugProcess.consolePrint("Resume out..")
+            }
 
 
         }
@@ -144,7 +156,7 @@ class SolidityDebugTracer(private val debugProcess: Web3jDebugProcess) : Operati
     }
 
     fun setBreakpoints(breakpoints: MutableMap<String, MutableSet<Int>>) {
-        this.breakPoints = breakpoints
+        breakPointTraceManager.setBreakPoints(breakpoints)
     }
 
     fun sendCommand(command: DebugCommand) {
@@ -155,7 +167,8 @@ class SolidityDebugTracer(private val debugProcess: Web3jDebugProcess) : Operati
         return stackFrames
     }
 
-    private fun updateStackFrame(filePath: String, line: Int, offset: Int, frame: MessageFrame) {
+    private fun updateStackFrame(filePath: String?, line: Int, offset: Int, frame: MessageFrame) {
+
         val baseDir = debugProcess.getRunConfig().project.basePath
 //
         debugProcess.consolePrint("Call for the pointer to update and go to line $line")
@@ -165,12 +178,14 @@ class SolidityDebugTracer(private val debugProcess: Web3jDebugProcess) : Operati
             debugProcess.session.project,
             "$baseDir/$filePath", line, offset
         )
+
         resolveFrameContext(stackFrame.sourcePosition as SoliditySourcePosition, stackFrame)
+
 
         updateSourcePosition(stackFrame.sourcePosition as SoliditySourcePosition)
         captureMemory(frame).forEach {
             it.let {
-                val value = it?.toHexString() + " " + it?.toArray()?.let { it1 -> String(it1) }
+                val value = it?.toHexString() + " " + it?.toArray()?.let { it1 -> StringUtils.arrayToReadableString(it1) }
                  stackFrame.addValue(SolidityNamedValue("memory", "string", value))
             }
         }
