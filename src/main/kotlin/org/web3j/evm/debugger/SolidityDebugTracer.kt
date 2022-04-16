@@ -100,14 +100,11 @@ class SolidityDebugTracer(private val debugProcess: Web3jDebugProcess) : Operati
             }
 
             DebugCommand.SUSPEND -> {
-                if (filePath != null) {
-                    updateStackFrame(filePath, firstSelectedLine, firstSelectedOffset, frame)
-                }
+                updateStackFrame(filePath, firstSelectedLine, firstSelectedOffset, frame)
 
                 debugProcess.suspend(firstSelectedLine)
                 lastSelectedLine = firstSelectedLine
                 runTillNextLine = true
-
 
                 return step(frame)
             }
@@ -239,11 +236,13 @@ class SolidityDebugTracer(private val debugProcess: Web3jDebugProcess) : Operati
     }
 
     private fun resolveFrameContext(sourcePosition: SoliditySourcePosition, stackFrame: SolidityStackFrame) {
-        val parent = PsiTreeUtil.getParentOfType(
-            sourcePosition.getPsiElementAtPosition(),
-            SolElement::class.java
-        )
-        resolveContext(parent!!, stackFrame)
+        ApplicationManager.getApplication().runReadAction {
+            val parent = PsiTreeUtil.getParentOfType(
+                sourcePosition.getPsiElementAtPosition(),
+                SolElement::class.java
+            )
+            resolveContext(parent!!, stackFrame)
+        }
     }
 
 
