@@ -1,5 +1,6 @@
 package org.web3j.evm.debugger.frame
 
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.PsiTreeUtil
@@ -37,10 +38,12 @@ class SolidityStackFrame(
 
         // TODO: If not a parent the the parent we need to know the context of execution if we are withing a function then the context is the function element if its a state variable then the context is the contract
         val srcPos = sourcePosition as SoliditySourcePosition
-        val context = srcPos.getPsiElementAtPosition()?.let { resolveContext(it) }
-        if (context != null) {
-            component.append(context.elementType.debugName, SimpleTextAttributes.REGULAR_ATTRIBUTES)
 
+        ApplicationManager.getApplication().runReadAction {
+            val context = srcPos.getPsiElementAtPosition()?.let { resolveContext(it) }
+            if (context != null) {
+                component.append(context.elementType.debugName, SimpleTextAttributes.REGULAR_ATTRIBUTES)
+            }
         }
     }
 

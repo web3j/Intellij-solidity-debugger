@@ -33,6 +33,8 @@ class EvmRunConfigurationType :
             override fun isApplicable(project: Project): Boolean {
                 return hasJavaSupport
             }
+
+            override fun getId(): String = super.getName()
         }
     }
 }

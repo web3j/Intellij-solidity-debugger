@@ -7,7 +7,7 @@ import com.intellij.pom.Navigatable
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiManager
 import com.intellij.xdebugger.XSourcePosition
-import com.intellij.xdebugger.impl.XSourcePositionImpl
+import com.intellij.xdebugger.impl.XDebuggerUtilImpl
 import java.nio.file.Paths
 import org.web3j.evm.debugger.utils.SourceMapperUtils
 
@@ -35,7 +35,7 @@ class SoliditySourcePosition(
     }
 
     override fun createNavigatable(project: Project): Navigatable {
-        return XSourcePositionImpl.doCreateOpenFileDescriptor(project, this)
+        return XDebuggerUtilImpl.createNavigatable(project, this);
     }
 
     fun getPsiElementAtPosition(): PsiElement? {

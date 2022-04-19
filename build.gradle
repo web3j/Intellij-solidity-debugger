@@ -1,7 +1,7 @@
 plugins {
     id 'java'
     id "org.jetbrains.intellij" version "1.5.2"
-    id 'org.jetbrains.kotlin.jvm' version '1.6.0-M1'
+    id 'org.jetbrains.kotlin.jvm' version '1.6.20'
 }
 
 
@@ -18,8 +18,8 @@ dependencies {
     implementation fileTree(dir: 'libs', include: ['log4j-api-3.0.0-SNAPSHOT.jar'])
 
     implementation 'com.beust:klaxon:5.6'
-    implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.5.21'
-    implementation 'org.jetbrains.kotlin:kotlin-reflect:1.5.21'
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.6.20'
+    implementation 'org.jetbrains.kotlin:kotlin-reflect:1.6.20'
     implementation "org.web3j:web3j-evm:4.9.2"
 
     def withoutAbi = { exclude group: 'org.web3j', module: 'abi' }
@@ -35,17 +35,14 @@ dependencies {
 }
 
 // See https://github.com/JetBrains/gradle-intellij-plugin/
-
 intellij {
     pluginName = 'Intellij solidity debugger'
-    version = '2020.3.2'
+    version = '2021.2.4'
     downloadSources = true
-    dependencies {
-        compileOnly fileTree(dir: 'libs', include: ['intellij-solidity-2.3.7-SNAPSHOT.jar'])
-    }
+
     plugins = [
             "java", //Required for com.intellij.execution.CommonJavaRunConfigurationParameters
-            "me.serce.solidity:2.3.5",
+            "me.serce.solidity:2.3.8",
     ]
 }
 compileKotlin {
